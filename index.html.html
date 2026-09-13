@@ -1,0 +1,2190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+<title>خمّن الشخصية — لعبة تخمين الصور</title>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-storage-compat.js"></script>
+
+<style>
+:root,
+[data-theme="dark"]{
+  --bg-1:#0c0a13;
+  --bg-2:#120f1c;
+  --surface:#171320;
+  --surface-2:#1e1829;
+  --surface-3:#261f33;
+  --border:#2b2436;
+  --ink:#efe9de;
+  --ink-soft:#c9c2d6;
+  --ink-muted:#8d8299;
+  --glow:#7bd9a5;
+  --glow-2:#4fae80;
+  --violet:#8fe3c0;
+  --violet-dim:#4a9070;
+  --danger:#e2657a;
+  --shadow-deep:0 20px 60px rgba(0,0,0,0.55);
+}
+[data-theme="light"]{
+  --bg-1:#f6f0e6;
+  --bg-2:#efe6d6;
+  --surface:#fffdf8;
+  --surface-2:#f7f0e3;
+  --surface-3:#efe4d0;
+  --border:#e3d5bc;
+  --ink:#2a2118;
+  --ink-soft:#4c4033;
+  --ink-muted:#8a7c66;
+  --glow:#2e9c6b;
+  --glow-2:#237a54;
+  --violet:#4a9070;
+  --violet-dim:#8fe3c0;
+  --danger:#c14a5d;
+  --shadow-deep:0 16px 40px rgba(90,70,40,0.14);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse 700px 500px at 18% -8%, rgba(164,147,255,0.10), transparent 55%),
+    radial-gradient(ellipse 600px 500px at 100% 15%, rgba(240,176,108,0.08), transparent 50%),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:var(--ink);
+  font-family:'Tajawal',sans-serif;
+  transition:background .3s ease,color .3s ease;
+}
+::-webkit-scrollbar{width:7px;height:7px;}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--violet);outline-offset:2px;}
+textarea,input,select{font-family:inherit;}
+
+.serif{font-family:'Amiri',serif;}
+
+[class*="htmltoapk"], a[href*="htmltoapk"], div[style*="htmltoapk"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ---------- splash screen ---------- */
+#splash-screen{
+  position:fixed;inset:0;z-index:999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  background:
+    radial-gradient(ellipse 700px 500px at 18% -8%, rgba(164,147,255,0.14), transparent 55%),
+    radial-gradient(ellipse 600px 500px at 100% 15%, rgba(240,176,108,0.10), transparent 50%),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  transition:opacity .6s ease, visibility .6s ease;
+  overflow:hidden;
+}
+#splash-screen.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.splash-glow{
+  position:absolute;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle,rgba(240,176,108,0.20),transparent 70%);
+  filter:blur(10px);animation:splashGlowPulse 2.4s ease-in-out infinite;
+}
+@keyframes splashGlowPulse{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.15);}}
+#splash-emoji{
+  font-size:72px;position:relative;z-index:1;
+  color:var(--glow);
+  filter:drop-shadow(0 6px 18px rgba(240,176,108,0.45));
+  opacity:0;
+  animation:emojiPop 1.2s cubic-bezier(.25,.7,.35,1) forwards, emojiFloat 2.4s ease-in-out 1.2s infinite;
+}
+@keyframes emojiPop{
+  0%{transform:scale(0) rotate(-20deg);opacity:0;}
+  60%{transform:scale(1.2) rotate(10deg);opacity:1;}
+  100%{transform:scale(1) rotate(0deg);opacity:1;}
+}
+@keyframes emojiFloat{
+  0%,100%{transform:translateY(0) rotate(-3deg);}
+  50%{transform:translateY(-10px) rotate(3deg);}
+}
+.splash-word{
+  font-family:'Amiri',serif;font-weight:700;font-size:32px;position:relative;z-index:1;
+  background:linear-gradient(135deg,var(--glow),var(--violet));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  opacity:0;animation:splashFadeUp .7s ease forwards;animation-delay:1s;
+}
+.splash-tag{
+  font-size:13px;color:var(--ink-muted);position:relative;z-index:1;
+  opacity:0;animation:splashFadeUp .7s ease forwards;animation-delay:1.25s;
+}
+@keyframes splashFadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+#app-root{opacity:0;pointer-events:none;transition:opacity .5s ease;}
+#app-root.visible{opacity:1;pointer-events:auto;}
+
+/* ---------- بوابة تسجيل الدخول بحساب جوجل ---------- */
+#auth-gate-screen{
+  position:fixed;inset:0;z-index:500;display:none;
+  align-items:center;justify-content:center;padding:20px;
+  background:
+    radial-gradient(ellipse 700px 500px at 18% -8%, rgba(164,147,255,0.10), transparent 55%),
+    radial-gradient(ellipse 600px 500px at 100% 15%, rgba(240,176,108,0.08), transparent 50%),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+}
+.auth-gate-card{
+  width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:34px 26px;box-shadow:var(--shadow-deep);text-align:center;
+}
+.auth-gate-glyph{
+  font-weight:700;font-size:26px;margin-bottom:8px;
+  background:linear-gradient(135deg,var(--glow),var(--violet));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.auth-gate-sub{font-size:13px;color:var(--ink-muted);margin-bottom:26px;line-height:1.7;}
+.btn-google{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:#fff;color:#3c3c3c;border:none;border-radius:12px;padding:13px;
+  font-weight:700;font-size:14px;cursor:pointer;transition:filter .15s ease,transform .1s ease;
+}
+.btn-google i{color:#EA4335;font-size:16px;}
+.btn-google:active{transform:scale(0.98);}
+.btn-google:disabled{opacity:.6;cursor:default;}
+.auth-gate-error{color:var(--danger);font-size:12.5px;margin-top:14px;min-height:16px;}
+.auth-gate-note{font-size:11px;color:var(--ink-muted);margin-top:18px;line-height:1.7;}
+
+/* ---------- topbar ---------- */
+#topbar{
+  position:sticky;top:0;z-index:40;
+  padding:calc(16px + env(safe-area-inset-top)) 20px 14px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  background:linear-gradient(180deg,var(--bg-1) 60%,transparent);
+}
+.wordmark{display:flex;align-items:baseline;gap:8px;}
+.wordmark .glyph{
+  font-family:'Amiri',serif;font-weight:700;font-size:26px;
+  background:linear-gradient(135deg,var(--glow),var(--violet));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.wordmark .tag{font-size:11px;color:var(--ink-muted);}
+.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.visitor-counter{
+  display:flex;align-items:center;gap:5px;
+  font-size:12px;color:var(--ink-muted);
+  background:var(--surface);border:1px solid var(--border);
+  padding:8px 12px;border-radius:20px;
+}
+.visitor-counter i{color:var(--glow);}
+.follow-btn{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:700;color:var(--ink-soft);
+  background:var(--surface);border:1px solid var(--border);
+  padding:8px 13px;border-radius:20px;cursor:pointer;transition:all .15s ease;
+}
+.follow-btn i{color:var(--danger);}
+.follow-btn:active{transform:scale(0.95);}
+.follow-btn.following{background:linear-gradient(135deg,var(--glow),var(--glow-2));color:#241304;border-color:transparent;}
+.follow-btn.following i{color:#241304;}
+.icon-btn{
+  width:38px;height:38px;border-radius:50%;background:var(--surface);
+  border:1px solid var(--border);color:var(--ink-soft);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:14px;transition:transform .12s ease, background .15s ease, color .15s ease;
+}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink);}
+.icon-btn:active{transform:scale(0.92);}
+
+/* ---------- منتقي لون الواجهة الشخصي ---------- */
+.color-picker-wrap{position:relative;}
+.color-picker-pop{
+  position:absolute;top:calc(100% + 10px);left:0;z-index:120;
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:14px;box-shadow:var(--shadow-deep);width:212px;
+  opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:opacity .18s ease,transform .18s ease,visibility .18s ease;
+}
+.color-picker-pop.show{opacity:1;visibility:visible;transform:translateY(0);}
+.cp-title{font-size:12px;color:var(--ink-muted);margin-bottom:12px;font-weight:700;text-align:center;}
+.cp-swatches{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.cp-swatch{
+  width:34px;height:34px;border-radius:50%;border:2px solid var(--border);cursor:pointer;
+  background:var(--sw);transition:transform .12s ease,border-color .12s ease;position:relative;flex-shrink:0;
+}
+.cp-swatch:active{transform:scale(0.88);}
+.cp-swatch.active{border-color:var(--ink);}
+.cp-swatch.active::after{
+  content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;font-size:11px;
+  color:#fff;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  text-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+
+/* ---------- feed ---------- */
+#feed-wrap{max-width:680px;margin:0 auto;padding:6px clamp(16px,5vw,24px) calc(150px + env(safe-area-inset-bottom));}
+
+.category-bar{
+  display:flex;gap:8px;overflow-x:auto;padding:4px 2px 14px;
+  scrollbar-width:none;margin-bottom:10px;
+}
+.category-bar::-webkit-scrollbar{display:none;}
+
+/* شريط مالك المنصة أعلى الشاشة */
+.owner-strip{display:flex;justify-content:center;margin-bottom:16px;}
+.owner-strip .owner-chip{margin:0 auto;}
+
+/* شريط بحث المستخدمين على الشاشة الرئيسية */
+.home-search-wrap{margin:0 0 16px;}
+.home-search-box{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:13px 18px;box-shadow:var(--shadow-deep);transition:border-color .15s ease;
+}
+.home-search-box:focus-within{border-color:var(--glow);}
+.home-search-box i{color:var(--ink-muted);font-size:14px;}
+.home-search-box input{flex:1;background:transparent;border:none;color:var(--ink);font-size:14px;outline:none;min-width:0;}
+.home-search-box input::placeholder{color:var(--ink-muted);}
+#home-search-results{margin-top:8px;}
+#home-search-results:empty{margin-top:0;}
+
+/* بلاطتا "ابدأ اللعب" و"بحث عن صديق" في وسط الشاشة */
+.home-tiles{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;
+  margin:10px 0 26px;
+}
+.home-tile{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding:30px 14px;border-radius:22px;border:1px solid var(--border);
+  background:var(--surface);cursor:pointer;transition:transform .15s ease,border-color .2s ease;
+  font-family:inherit;color:var(--ink);
+}
+.home-tile:active{transform:scale(0.96);}
+.home-tile i{font-size:30px;}
+.home-tile span{font-size:14px;font-weight:800;}
+.home-tile-play{
+  background:linear-gradient(135deg,rgba(240,176,108,0.18),rgba(164,147,255,0.18));
+  border-color:var(--glow);
+}
+.home-tile-play i{color:var(--glow);}
+.home-tile-search{border-color:var(--violet);}
+.home-tile-search i{color:var(--violet);}
+
+.category-chip{
+  flex-shrink:0;border:1px solid var(--border);background:var(--surface);
+  color:var(--ink-muted);padding:8px 16px;border-radius:20px;font-size:13px;
+  font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;
+  transition:all .15s ease;white-space:nowrap;
+}
+.category-chip.active{
+  background:linear-gradient(135deg,rgba(240,176,108,0.18),rgba(164,147,255,0.18));
+  color:var(--ink);border-color:var(--glow);
+}
+.add-category-btn{
+  background:var(--surface-2);border:1px dashed var(--violet);
+  color:var(--violet);padding:8px 14px;border-radius:20px;font-size:12.5px;
+  font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;
+  flex-shrink:0;transition:all .15s ease;
+}
+.add-category-btn:hover{background:var(--surface-3);transform:scale(1.02);}
+
+.search-box{position:relative;margin-bottom:16px;}
+.search-box input{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:11px 16px 11px 40px;color:var(--ink);font-size:13.5px;
+  transition:border-color .2s ease;
+}
+.search-box input::placeholder{color:var(--ink-muted);}
+.search-box input:focus{border-color:var(--violet);}
+.search-box i{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--ink-muted);font-size:14px;}
+
+#feed{display:flex;flex-direction:column;gap:16px;}
+.secret-card{
+  position:relative;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-inline-start:3px solid var(--glow);
+  border-radius:6px 16px 16px 6px;
+  padding:18px 20px 15px;
+  cursor:pointer;
+  box-shadow:var(--shadow-deep);
+  transition:border-color .2s ease, transform .12s ease;
+}
+.secret-card:active{transform:scale(0.994);}
+.secret-card .meta-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.secret-card .meta-left{display:flex;align-items:center;gap:8px;}
+.category-badge{
+  font-size:11.5px;font-weight:700;color:var(--glow);background:var(--surface-2);
+  padding:4px 10px;border-radius:12px;border:1px solid var(--border);
+  display:flex;align-items:center;gap:5px;
+}
+.secret-card .time{font-size:11px;color:var(--ink-muted);}
+.secret-card .body-text{
+  font-family:'Tajawal',sans-serif;font-size:16.5px;line-height:1.8;color:var(--ink-soft);
+  display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;
+  white-space:pre-wrap;
+}
+.event-image{width:100%;border-radius:12px;max-height:280px;object-fit:cover;display:block;margin-bottom:12px;}
+.secret-card .foot-row{display:flex;align-items:center;justify-content:space-between;margin-top:13px;}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{
+  border:1px solid var(--border);background:var(--surface-2);color:var(--ink-muted);
+  border-radius:20px;padding:5px 10px;font-size:12px;display:flex;align-items:center;gap:5px;
+  cursor:pointer;transition:all .15s ease;
+}
+.pill.active{color:var(--glow);border-color:var(--glow);}
+.pill.replies-pill{cursor:default;}
+.pill.replies-pill:hover{background:var(--surface-2);}
+
+.delete-btn{
+  background:none;border:none;color:var(--ink-muted);cursor:pointer;font-size:13px;padding:4px 8px;border-radius:8px;transition:color .15s ease, background .15s ease;
+}
+.delete-btn:hover{color:var(--danger);background:var(--surface-2);}
+
+#empty-feed{text-align:center;color:var(--ink-muted);padding:70px 20px;font-size:14px;line-height:1.9;}
+#empty-feed i{font-size:36px;display:block;margin-bottom:14px;color:var(--glow);}
+
+/* ---------- FAB ---------- */
+#fab{
+  position:fixed;bottom:calc(36px + env(safe-area-inset-bottom));left:50%;
+  transform:translateX(-50%);
+  background:linear-gradient(135deg,var(--glow),var(--glow-2));
+  color:#241304;border:none;border-radius:30px;padding:14px 26px;
+  font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:9px;
+  cursor:pointer;box-shadow:0 10px 30px rgba(224,146,90,0.35),0 0 0 1px rgba(255,255,255,0.06) inset;
+  z-index:45;transition:transform .12s ease,box-shadow .15s ease;white-space:nowrap;
+}
+#fab:active{transform:translateX(-50%) scale(0.95);}
+
+/* ---------- overlays / modals ---------- */
+.overlay{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  z-index:200;
+  background:rgba(6,5,10,0.72);backdrop-filter:blur(5px);
+  align-items:flex-end;justify-content:center;
+}
+.overlay.show{display:flex;}
+@media (min-width:720px){ .overlay{align-items:center;} }
+
+.sheet{
+  background:linear-gradient(180deg,var(--surface),var(--bg-2));
+  border:1px solid var(--border);border-radius:22px 22px 0 0;
+  width:100%;max-width:620px;
+  max-height:92vh;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  box-shadow:var(--shadow-deep);
+  transition: transform 0.2s ease, max-height 0.2s ease;
+}
+@media (min-width:720px){ .sheet{border-radius:22px;} }
+.sheet-body{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:20px clamp(16px,5vw,20px);
+  flex:1;
+  min-height:0;
+}
+@media (min-width:720px){ 
+  .sheet{border-radius:22px;max-height:85vh;} 
+}
+
+.sheet-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px clamp(16px,5vw,20px);border-bottom:1px solid var(--border);
+  flex-shrink:0;background:var(--surface);z-index:2;
+}
+.sheet-head h3{margin:0;font-size:15.5px;font-weight:800;}
+
+/* composer & forms */
+.form-group{margin-bottom:14px;}
+.form-label{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;display:block;}
+.select-input{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:12px;padding:12px;color:var(--ink);font-size:14px;
+}
+#compose-textarea{
+  width:100%;min-height:150px;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:14px;color:var(--ink);
+  padding:15px;font-family:'Tajawal',sans-serif;font-size:16px;line-height:1.8;
+  resize:vertical;
+}
+#compose-textarea::placeholder{color:var(--ink-muted);font-size:14px;}
+.char-count{font-size:11px;color:var(--ink-muted);text-align:left;margin-top:6px;}
+
+.btn{
+  border:none;border-radius:12px;padding:13px;font-weight:700;font-size:14px;
+  cursor:pointer;width:100%;transition:filter .15s ease,transform .1s ease;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn:active{transform:scale(0.98);}
+.btn-glow{background:linear-gradient(135deg,var(--glow),var(--glow-2));color:#241304;}
+.btn-glow:disabled{opacity:.45;cursor:default;}
+.btn-secondary{background:var(--surface-2);color:var(--ink);border:1px solid var(--border);}
+.btn-danger{background:var(--danger);color:#fff;}
+
+#image-upload-section{margin-top:14px;}
+#image-preview-wrap img{width:100%;border-radius:12px;max-height:260px;object-fit:cover;display:block;}
+#image-preview-wrap .icon-btn{position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.5);color:#fff;border:none;}
+
+#compose-footer{
+  flex-shrink:0;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  padding:12px clamp(16px,5vw,20px) calc(16px + env(safe-area-inset-bottom));
+}
+
+/* detail */
+.detail-top-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+#detail-category-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--glow);}
+#detail-text{font-family:'Tajawal',sans-serif;font-size:18px;line-height:1.85;color:var(--ink);white-space:pre-wrap;}
+#detail-time{font-size:11.5px;color:var(--ink-muted);margin-top:14px;}
+.detail-reactions{display:flex;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.detail-actions-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
+.detail-report button, .detail-copy button{background:none;border:none;color:var(--ink-muted);font-size:11.5px;cursor:pointer;display:inline-flex;gap:5px;align-items:center;}
+.detail-report button:hover{color:var(--danger);}
+.detail-copy button:hover{color:var(--glow);}
+
+.replies-head{font-size:13px;color:var(--ink-muted);font-weight:700;margin:26px 0 12px;display:flex;align-items:center;gap:7px;}
+#replies-list{display:flex;flex-direction:column;}
+.reply-item{padding:14px 0;border-bottom:1px solid var(--border);position:relative;cursor:pointer;}
+.reply-item:last-child{border-bottom:none;}
+.reply-item .r-text{font-size:14.5px;line-height:1.8;color:var(--ink-soft);white-space:pre-wrap;}
+.reply-item .r-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.reply-item .r-time{font-size:10.5px;color:var(--ink-muted);}
+.reply-item .r-react{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.mini-react{
+  border:1px solid var(--border);background:var(--surface-2);color:var(--ink-muted);
+  border-radius:14px;padding:3px 9px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;
+}
+.mini-react.active{color:var(--glow);border-color:var(--glow);}
+#no-replies{color:var(--ink-muted);font-size:13px;text-align:center;padding:26px 10px;}
+
+.composer-bar{
+  flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);
+  padding:14px clamp(16px,5vw,20px) calc(20px + env(safe-area-inset-bottom));
+  display:flex;gap:10px;align-items:flex-end;
+}
+.chat-textarea{
+  flex:1;background:var(--surface-2);border:1.5px solid var(--border);color:var(--ink);
+  border-radius:18px;padding:14px 18px;font-size:14.5px;resize:none;
+  min-height:48px;max-height:120px;line-height:1.5;transition:border-color .15s ease;
+}
+.chat-textarea::placeholder{color:var(--ink-muted);}
+.chat-textarea:focus{border-color:var(--glow);}
+.reply-send{
+  width:46px;height:46px;border-radius:50%;border:none;flex-shrink:0;
+  background:linear-gradient(135deg,var(--glow),var(--glow-2));color:#241304;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.18);transition:transform .12s ease;
+}
+.reply-send:active{transform:scale(0.9);}
+
+.toast-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(90vw,380px);}
+.toast{background:var(--surface-3);border:1px solid var(--border);color:var(--ink);padding:11px 18px;border-radius:12px;font-size:12.5px;box-shadow:var(--shadow-deep);animation:toastIn .18s ease;text-align:center;}
+.toast.success{border-color:var(--glow);}
+.toast.error{border-color:var(--danger);}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+
+/* خيارات الحذف Modal */
+.delete-options{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+
+/* ============================================================
+   ملف المالك الفخم (Owner Profile)
+   ============================================================ */
+.owner-chip{
+  flex-shrink:0;border:1px solid var(--glow);
+  background:linear-gradient(135deg,rgba(240,176,108,0.22),rgba(164,147,255,0.16));
+  color:var(--ink);padding:6px 16px 6px 8px;border-radius:20px;font-size:13px;
+  font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;
+  transition:all .15s ease;white-space:nowrap;
+}
+.owner-chip:active{transform:scale(0.96);}
+.owner-chip .owner-chip-avatar-wrap{width:26px;height:26px;flex-shrink:0;}
+.post-owner-avatar-btn{background:none;border:none;padding:0;cursor:pointer;line-height:0;flex-shrink:0;}
+
+.avatar-frame{position:relative;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;}
+.avatar-frame img,.avatar-frame video{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;position:relative;z-index:3;background:var(--surface-2);}
+.avatar-frame.frame-gold::before,
+.avatar-frame.frame-violet::before{
+  content:'';position:absolute;inset:-4px;border-radius:50%;z-index:1;
+  background:conic-gradient(from var(--frame-angle,0deg), #f7d18a, #a493ff, #f0925a, #a493ff, #f7d18a);
+  animation:frameSpin 3.5s linear infinite;
+}
+.avatar-frame.frame-violet::before{
+  background:conic-gradient(from var(--frame-angle,0deg), #a493ff, #6a58c9, #c9aef7, #6a58c9, #a493ff);
+}
+.avatar-frame.frame-none::before{display:none;}
+.avatar-frame::after{
+  content:'';position:absolute;inset:-1px;border-radius:50%;z-index:2;background:var(--bg-2);
+}
+@keyframes frameSpin{to{--frame-angle:360deg;}}
+@property --frame-angle{syntax:'<angle>';inherits:true;initial-value:0deg;}
+
+.profile-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:6px 4px 18px;}
+.profile-hero .avatar-frame{width:104px;height:104px;margin-bottom:14px;}
+.profile-name-row{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;font-family:'Amiri',serif;font-weight:700;font-size:22px;}
+.verified-badge{
+  position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;
+  width:19px;height:19px;flex-shrink:0;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+.verified-badge svg{width:100%;height:100%;display:block;}
+.verified-badge::after{
+  content:'';position:absolute;top:0;bottom:0;left:-45%;width:35%;
+  background:linear-gradient(115deg,transparent,rgba(255,255,255,0.85),transparent);
+  animation:vipShine 2.6s ease-in-out infinite;
+  pointer-events:none;
+}
+.vip-badge{
+  position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:900;letter-spacing:.5px;color:#3a2405;
+  background:linear-gradient(135deg,#ffe6a8,#f0b06c 45%,#c97a3f);
+  padding:3px 10px;border-radius:10px;box-shadow:0 3px 10px rgba(224,146,90,0.4);
+}
+.vip-badge::after{
+  content:'';position:absolute;top:0;bottom:0;width:35%;
+  background:linear-gradient(115deg,transparent,rgba(255,255,255,0.75),transparent);
+  animation:vipShine 2.6s ease-in-out infinite;
+}
+@keyframes vipShine{0%{left:-45%;}100%{left:120%;}}
+.id-badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;
+  padding:2px 9px;border-radius:10px;background:var(--surface-2);color:var(--ink-muted);
+  border:1px solid var(--border);
+}
+.id-badge.owner{
+  position:relative;color:#3a2405;background:linear-gradient(135deg,#ffe6a8,#f0b06c 45%,#c97a3f);
+  border:none;font-weight:900;overflow:hidden;box-shadow:0 3px 10px rgba(224,146,90,0.35);
+}
+.id-badge.owner::after{
+  content:'';position:absolute;top:0;bottom:0;width:35%;
+  background:linear-gradient(115deg,transparent,rgba(255,255,255,0.75),transparent);
+  animation:vipShine 2.6s ease-in-out infinite;
+}
+.profile-titles{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:9px;}
+.title-pill{
+  background:linear-gradient(135deg,var(--glow),var(--glow-2));color:#241304;
+  font-size:11px;font-weight:800;padding:4px 12px;border-radius:14px;
+  display:flex;align-items:center;gap:4px;box-shadow:0 4px 14px rgba(224,146,90,0.3);
+}
+.profile-bio{font-size:13.5px;color:var(--ink-soft);line-height:1.8;margin-top:14px;max-width:440px;}
+.profile-actions{display:flex;gap:10px;margin-top:18px;width:100%;max-width:360px;}
+.profile-actions .btn{padding:12px;}
+.profile-stats-row{display:flex;gap:22px;margin-top:16px;justify-content:center;}
+.profile-stats-row .p-stat{text-align:center;}
+.profile-stats-row .p-stat .n{font-size:16px;font-weight:800;color:var(--glow);}
+.profile-stats-row .p-stat .l{font-size:10.5px;color:var(--ink-muted);}
+
+.contact-section{width:100%;max-width:360px;margin-top:14px;}
+.contact-status-note{font-size:12px;color:var(--ink-muted);text-align:center;margin-top:8px;line-height:1.7;}
+.contact-status-note a{color:var(--glow);}
+
+.chat-thread{max-height:400px;min-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:6px 4px;}
+.chat-bubble{max-width:78%;border-radius:14px;padding:9px 13px;font-size:13.5px;line-height:1.6;}
+.chat-bubble.me{align-self:flex-end;background:linear-gradient(135deg,var(--glow),var(--glow-2));color:#241304;}
+.chat-bubble.owner{align-self:flex-start;background:var(--surface-2);border:1px solid var(--border);color:var(--ink);}
+.chat-bubble-wrap{display:flex;flex-direction:column;align-self:flex-start;gap:4px;max-width:78%;}
+.chat-owner-tag{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--ink-muted);padding-right:2px;}
+#chat-empty{color:var(--ink-muted);font-size:12.5px;text-align:center;padding:20px 10px;}
+
+.profile-media-head{font-size:13px;color:var(--ink-muted);font-weight:700;margin:24px 0 12px;display:flex;align-items:center;gap:7px;}
+.profile-media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.profile-media-item{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1/1;background:var(--surface-2);}
+.profile-media-item img,.profile-media-item video{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;}
+.profile-media-item .play-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;background:rgba(0,0,0,0.18);pointer-events:none;}
+#no-owner-media{color:var(--ink-muted);font-size:12.5px;text-align:center;padding:20px 10px;}
+
+.media-view-overlay{display:none;position:fixed;inset:0;z-index:260;background:rgba(4,3,7,0.92);align-items:center;justify-content:center;padding:20px;}
+.media-view-overlay.show{display:flex;}
+.media-view-overlay img,.media-view-overlay video{max-width:100%;max-height:85vh;border-radius:10px;}
+.media-view-close{position:absolute;top:calc(16px + env(safe-area-inset-top));left:16px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.12);color:#fff;border:none;font-size:16px;cursor:pointer;}
+
+/* ---------- الملف الشخصي للمستخدم / الأصدقاء ---------- */
+.my-avatar-upload{position:relative;width:84px;height:84px;margin:0 auto;cursor:pointer;}
+.avatar-photo-mask{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--surface-2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;}
+.avatar-photo-mask img{width:100%;height:100%;object-fit:cover;}
+.my-avatar-upload .cam-badge{position:absolute;bottom:-2px;right:-2px;width:26px;height:26px;border-radius:50%;background:var(--glow);color:#241304;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid var(--surface);}
+.name-edit-row{display:flex;gap:8px;margin-top:14px;}
+.name-edit-row input{flex:1;}
+.my-id-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;}
+.section-title{font-size:13px;color:var(--ink-muted);font-weight:700;margin:22px 0 10px;display:flex;align-items:center;gap:7px;}
+.search-id-row{display:flex;gap:8px;}
+.search-id-row input{flex:1;}
+.user-row{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:9px 12px;margin-bottom:8px;}
+.user-row .u-avatar{width:38px;height:38px;border-radius:50%;overflow:hidden;background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.user-row .u-avatar img{width:100%;height:100%;object-fit:cover;}
+.user-row .u-info{flex:1;min-width:0;}
+.user-row .u-name{font-size:13.5px;font-weight:700;color:var(--ink);}
+.user-row .u-id{font-size:11px;color:var(--ink-muted);}
+.user-row .u-actions{display:flex;gap:6px;flex-shrink:0;}
+.user-row .u-actions button{white-space:nowrap;padding:7px 10px;font-size:12px;}
+.empty-note{color:var(--ink-muted);font-size:12.5px;text-align:center;padding:14px 10px;}
+
+/* ---------- لعبة خمّن الشخصية ---------- */
+.game-link-box{display:flex;gap:8px;align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:10px;word-break:break-all;font-size:11.5px;color:var(--ink-muted);}
+.vs-row{display:flex;align-items:stretch;gap:10px;margin:14px 0;}
+.vs-card{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:10px;text-align:center;}
+.vs-card .vs-label{font-size:11px;color:var(--ink-muted);font-weight:700;margin-bottom:8px;}
+.vs-card .vs-img{width:100%;aspect-ratio:1/1;border-radius:10px;object-fit:cover;background:var(--surface);}
+.vs-card .vs-secret{width:100%;aspect-ratio:1/1;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--ink-muted);}
+.vs-divider{display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--glow);font-size:13px;}
+.guess-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:6px;}
+.guess-box input{width:100%;margin-bottom:8px;}
+.reveal-panel{margin-top:10px;}
+.reveal-cards-row{display:flex;gap:12px;margin-bottom:10px;}
+.reveal-card{flex:1;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px;animation:revealPop .5s cubic-bezier(.25,.8,.35,1);}
+.reveal-card img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;margin-bottom:8px;background:var(--surface-2);}
+.reveal-card .r-lbl{font-size:11px;color:var(--ink-muted);margin-bottom:6px;font-weight:700;}
+.reveal-card .r-name{font-size:14px;font-weight:800;color:var(--glow);}
+@keyframes revealPop{0%{opacity:0;transform:scale(.75) rotateY(90deg);}100%{opacity:1;transform:scale(1) rotateY(0);}}
+.reveal-wait,.reveal-consent{margin-top:10px;background:var(--surface);border:1px dashed var(--glow);border-radius:12px;padding:14px;text-align:center;font-size:13px;color:var(--ink-soft);}
+.reveal-wait i{color:var(--glow);margin-left:6px;}
+.result-banner{text-align:center;padding:22px 10px;}
+.result-banner .r-icon{font-size:44px;margin-bottom:10px;}
+.result-banner.win .r-icon{color:var(--glow);}
+.result-banner.lose .r-icon{color:var(--ink-muted);}
+.game-actions-row{display:flex;gap:8px;justify-content:center;margin-top:14px;}
+.game-friend-list{margin-top:6px;}
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- شاشة الافتتاح المتحركة -->
+<div id="splash-screen">
+  <div class="splash-glow"></div>
+  <i class="fas fa-gamepad" id="splash-emoji"></i>
+  <div class="splash-word">خمّن الشخصية</div>
+  <div class="splash-tag">تحدَّ أصدقاءك في لعبة تخمين الصور 🎮</div>
+</div>
+
+<!-- بوابة تسجيل الدخول (مطلوبة قبل اللعب) -->
+<div id="auth-gate-screen">
+  <div class="auth-gate-card">
+    <div class="auth-gate-glyph serif">خمّن الشخصية</div>
+    <div class="auth-gate-sub">سجّل الدخول بحساب جوجل للمتابعة، حتى يتم حفظ معلوماتك وتقدّمك في اللعبة.</div>
+    <button class="btn-google" id="google-signin-btn" onclick="signInWithGoogle()">
+      <i class="fa-brands fa-google"></i> تسجيل الدخول بواسطة جوجل
+    </button>
+    <div class="btn-google" id="auth-gate-loading" style="display:none;cursor:default;">
+      <i class="fas fa-spinner fa-spin"></i> جاري التحقق من تسجيل الدخول...
+    </div>
+    <div class="auth-gate-error" id="auth-gate-error"></div>
+    <div class="auth-gate-note">لن نطّلع على كلمة مرور حسابك في جوجل، ولا نحصل عليها؛ يتم فقط مشاركة اسمك وبريدك الإلكتروني وصورتك الشخصية معنا.</div>
+    <pre id="auth-debug-log" style="display:none;text-align:left;direction:ltr;background:#000;color:#7CFC7C;font-size:10px;line-height:1.6;padding:10px;border-radius:8px;margin-top:16px;max-height:180px;overflow:auto;white-space:pre-wrap;"></pre>
+  </div>
+</div>
+
+<div id="app-root">
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<header id="topbar">
+  <div class="wordmark">
+    <span class="glyph">خمّن الشخصية</span>
+    <span class="tag">لعبة تخمين الصور مع الأصدقاء</span>
+  </div>
+  <div class="top-actions">
+    <div class="visitor-counter" title="عدد زوار الموقع">
+      <i class="fas fa-eye"></i> <span id="visitor-count">0</span>
+    </div>
+    <button class="follow-btn" id="follow-btn" onclick="toggleFollow()" title="متابعة المنصة">
+      <i class="far fa-heart" id="follow-icon"></i>
+      <span id="follow-label">متابعة</span>
+      <span id="follow-count">200</span>
+    </button>
+    <div class="color-picker-wrap">
+      <button class="icon-btn" id="color-picker-toggle" onclick="toggleColorPicker(event)" title="تغيير اللون"><i class="fas fa-palette"></i></button>
+      <div class="color-picker-pop" id="color-picker-pop">
+        <div class="cp-title">تغيير اللون</div>
+        <div class="cp-swatches">
+          <button class="cp-swatch" data-theme="green" style="--sw:#7bd9a5" onclick="choosePersonalTheme('green')" title="نعناعي (افتراضي)"></button>
+          <button class="cp-swatch" data-theme="red" style="--sw:#f07a6a" onclick="choosePersonalTheme('red')" title="أحمر"></button>
+          <button class="cp-swatch" data-theme="pink" style="--sw:#f0a0c8" onclick="choosePersonalTheme('pink')" title="وردي"></button>
+          <button class="cp-swatch" data-theme="purple" style="--sw:#b89af0" onclick="choosePersonalTheme('purple')" title="بنفسجي"></button>
+          <button class="cp-swatch" data-theme="blue" style="--sw:#6ab7f0" onclick="choosePersonalTheme('blue')" title="أزرق"></button>
+        </div>
+      </div>
+    </div>
+    <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="الوضع الليلي/النهاري"><i class="fas fa-moon"></i></button>
+    <button class="icon-btn" onclick="openMyProfile()" title="ملفي الشخصي"><i class="fas fa-user"></i></button>
+  </div>
+</header>
+
+<div class="owner-strip" id="owner-strip">
+  <button class="owner-chip" id="owner-chip-btn" onclick="openOwnerProfile()">
+    <span class="owner-chip-avatar-wrap">
+      <span class="avatar-frame frame-none" id="strip-avatar-frame">
+        <i class="fas fa-crown" style="font-size:12px;color:var(--glow);position:relative;z-index:3;" id="strip-avatar-fallback"></i>
+        <video id="strip-avatar-video" style="display:none;" autoplay loop muted playsinline></video>
+      </span>
+    </span>
+    <span id="strip-owner-name">مالك المنصة</span>
+    <span class="verified-badge" id="strip-verified-badge" style="display:none;width:14px;height:14px;"></span>
+    <span class="vip-badge" id="strip-vip-badge" style="display:none;font-size:9px;padding:1px 7px;"><i class="fas fa-crown"></i> VIP</span>
+  </button>
+</div>
+
+<div class="home-search-wrap">
+  <div class="home-search-box">
+    <i class="fas fa-magnifying-glass"></i>
+    <input type="text" id="home-search-input" placeholder="ابحث عن مستخدم بالأيدي..." oninput="handleHomeSearchInput()">
+  </div>
+  <div id="home-search-results"></div>
+</div>
+
+<div class="home-tiles" id="home-tiles">
+  <button class="home-tile home-tile-play" onclick="openGameOverlay()">
+    <i class="fas fa-gamepad"></i>
+    <span>ابدأ اللعب</span>
+  </button>
+  <button class="home-tile home-tile-search" onclick="focusHomeSearch()">
+    <i class="fas fa-magnifying-glass"></i>
+    <span>بحث عن صديق</span>
+  </button>
+</div>
+
+<!-- Modal: الملف الشخصي لصاحب المنصة -->
+<div class="overlay" id="owner-profile-overlay">
+  <div class="sheet" style="max-width:480px;">
+    <div class="sheet-head">
+      <h3><i class="fas fa-crown" style="color:var(--glow);"></i> الملف الشخصي</h3>
+      <button class="icon-btn" onclick="closeOwnerProfile()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div class="profile-hero">
+        <div class="avatar-frame frame-none" id="profile-avatar-frame">
+          <i class="fas fa-crown" style="font-size:34px;color:var(--glow);position:relative;z-index:3;" id="profile-avatar-placeholder"></i>
+        </div>
+        <div class="profile-name-row">
+          <span id="profile-owner-name">مالك المنصة</span>
+          <span class="verified-badge" id="profile-verified-badge" style="display:none;" title="حساب موثّق"></span>
+          <span class="vip-badge" id="profile-vip-badge" style="display:none;"><i class="fas fa-crown"></i> VIP</span>
+        </div>
+        <div class="profile-titles" id="profile-titles"></div>
+        <span class="id-badge owner" id="profile-id-badge" style="margin-top:8px;"><i class="fas fa-fingerprint"></i> 1-iD</span>
+        <div class="profile-bio" id="profile-bio"></div>
+        <div class="profile-stats-row">
+          <div class="p-stat"><div class="n" id="profile-followers-num">0</div><div class="l">متابع</div></div>
+          <div class="p-stat"><div class="n" id="profile-visitors-num">0</div><div class="l">زائر</div></div>
+        </div>
+        <div class="profile-actions">
+          <button class="btn follow-btn" id="profile-follow-btn" onclick="toggleFollow()" style="width:100%;justify-content:center;">
+            <i class="far fa-heart" id="profile-follow-icon"></i> <span id="profile-follow-label">متابعة</span>
+          </button>
+        </div>
+        <div class="contact-section" id="contact-section"></div>
+      </div>
+
+      <div class="profile-media-head"><i class="fas fa-images"></i> صور ومقاطع المالك</div>
+      <div class="profile-media-grid" id="profile-media-grid"></div>
+      <div id="no-owner-media" style="display:none;">لم يتم نشر أي محتوى بعد.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: محادثتك مع المالك -->
+<div class="overlay" id="chat-overlay">
+  <div class="sheet" style="max-width:480px;">
+    <div class="sheet-head">
+      <h3><i class="fas fa-comments" style="color:var(--glow);"></i> محادثتك مع المالك</h3>
+      <button class="icon-btn" onclick="closeChatModal()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div class="chat-thread" id="chat-thread"></div>
+      <div id="chat-empty" style="display:none;">لا توجد رسائل بعد، ابدأ الحديث!</div>
+    </div>
+    <div class="composer-bar">
+      <textarea class="chat-textarea" id="chat-input" placeholder="اكتب رسالتك هنا..." rows="1"></textarea>
+      <button class="reply-send" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: ملفي الشخصي + الأصدقاء -->
+<div class="overlay" id="my-profile-overlay">
+  <div class="sheet" style="max-width:480px;">
+    <div class="sheet-head">
+      <h3><i class="fas fa-user" style="color:var(--glow);"></i> ملفي الشخصي</h3>
+      <button class="icon-btn" onclick="closeMyProfile()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div class="section-title" style="margin-top:0;"><i class="fas fa-pen"></i> تعديل الملف الشخصي</div>
+      <input type="file" id="my-avatar-input" accept="image/*" style="display:none" onchange="handleMyAvatarSelect(event)">
+      <div class="my-avatar-upload" onclick="document.getElementById('my-avatar-input').click()">
+        <div class="avatar-photo-mask">
+          <img id="my-avatar-img" src="" style="display:none;">
+          <i class="fas fa-user" id="my-avatar-placeholder" style="font-size:30px;color:var(--ink-muted);"></i>
+        </div>
+        <span class="cam-badge"><i class="fas fa-camera"></i></span>
+      </div>
+      <div class="name-edit-row">
+        <input type="text" id="my-name-input" maxlength="30" placeholder="اسمك">
+        <button class="btn btn-secondary" onclick="saveMyName()"><i class="fas fa-check"></i></button>
+      </div>
+      <div class="my-id-row">
+        <span class="id-badge">iD <span id="my-id-value">--</span></span>
+        <button class="icon-btn" onclick="copyMyId()" title="نسخ الأيدي"><i class="fas fa-copy"></i></button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11.5px;color:var(--ink-muted);margin-top:10px;">
+        <i class="fa-brands fa-google" style="color:var(--glow);"></i>
+        <span id="my-google-email">--</span>
+      </div>
+      <button class="btn btn-secondary" style="width:100%;margin-top:14px;" onclick="signOutUser()">
+        <i class="fas fa-right-from-bracket"></i> تسجيل الخروج
+      </button>
+
+      <div class="section-title"><i class="fas fa-user-clock"></i> طلبات الصداقة الواردة</div>
+      <div id="friend-requests-list"><div class="empty-note">لا توجد طلبات حالياً</div></div>
+
+      <div class="section-title" id="friends-section"><i class="fas fa-users"></i> الأصدقاء</div>
+      <div id="friends-list"><div class="empty-note">لا يوجد أصدقاء بعد</div></div>
+
+      <div class="section-title"><i class="fas fa-user-slash"></i> المحظورون</div>
+      <div id="blocked-list"><div class="empty-note">لا يوجد محظورون</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: عرض ملف مستخدم آخر (من خلال الضغط على صورته بجانب منشوره) -->
+<div class="overlay" id="view-user-overlay">
+  <div class="sheet" style="max-width:420px;">
+    <div class="sheet-head">
+      <h3><i class="fas fa-user" style="color:var(--glow);"></i> الملف الشخصي</h3>
+      <button class="icon-btn" onclick="closeViewUser()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sheet-body" style="text-align:center;">
+      <div class="my-avatar-upload" style="cursor:default;">
+        <div class="avatar-photo-mask">
+          <img id="view-user-avatar" src="" style="display:none;">
+          <i class="fas fa-user" id="view-user-placeholder" style="font-size:30px;color:var(--ink-muted);"></i>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:800;margin-top:10px;" id="view-user-name"></div>
+      <div class="my-id-row"><span class="id-badge">iD <span id="view-user-id"></span></span></div>
+      <div id="view-user-actions" style="margin-top:16px;display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: لعبة خمّن الشخصية -->
+<div class="overlay" id="game-overlay">
+  <div class="sheet" style="max-width:680px;">
+    <div class="sheet-head">
+      <h3><i class="fas fa-gamepad" style="color:var(--glow);"></i> تحدّي التخمين</h3>
+      <button class="icon-btn" onclick="closeGameOverlay()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sheet-body" id="game-body">
+
+      <div id="game-lobby">
+        <div class="section-title"><i class="fas fa-link"></i> ابدأ منافسة برابط دعوة</div>
+        <button class="btn btn-glow" style="width:100%;" onclick="createQuickMatchInvite()"><i class="fas fa-plus"></i> إنشاء رابط منافسة جديد</button>
+        <div id="quick-match-link-box"></div>
+
+        <div class="section-title"><i class="fas fa-bell"></i> دعوات منافسة واردة</div>
+        <div id="game-invites-list"><div class="empty-note">لا توجد دعوات حالياً</div></div>
+
+        <div class="section-title"><i class="fas fa-users"></i> تحدَّ أي مستخدم</div>
+        <div id="game-friends-list" class="game-friend-list"><div class="empty-note">جاري تحميل المستخدمين...</div></div>
+      </div>
+
+      <div id="game-match" style="display:none;">
+        <div class="vs-row">
+          <div class="vs-card">
+            <div class="vs-label">صورتك (سرّية عنك، اسأل خصمك ليساعدك)</div>
+            <div class="vs-secret"><i class="fas fa-question"></i></div>
+          </div>
+          <div class="vs-divider">VS</div>
+          <div class="vs-card">
+            <div class="vs-label">الصورة التي يجب أن تساعد خصمك على تخمينها</div>
+            <img class="vs-img" id="opponent-visible-img" src="">
+          </div>
+        </div>
+
+        <div class="guess-box">
+          <button class="btn btn-glow" style="width:100%;" id="reveal-request-btn" onclick="requestMutualReveal()">
+            <i class="fas fa-eye"></i> إظهار الشخصية للخصم
+          </button>
+
+          <div id="reveal-request-box" style="display:none;"></div>
+
+          <div class="reveal-panel" id="reveal-panel" style="display:none;">
+            <div class="reveal-cards-row" id="reveal-cards-row"></div>
+            <div class="game-actions-row">
+              <button class="btn btn-glow" style="width:100%;" onclick="declareGameResult('win')"><i class="fas fa-trophy"></i> تخميني كان صحيحاً، أنا الفائز</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title"><i class="fas fa-comments"></i> محادثة المنافسة (اسأل أسئلة بـ نعم/لا)</div>
+        <div class="chat-thread" id="game-chat-thread"></div>
+        <div class="composer-bar">
+          <textarea class="chat-textarea" id="game-chat-input" placeholder="اكتب سؤالك أو إجابتك هنا..." rows="1"></textarea>
+          <button class="reply-send" onclick="sendGameChatMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+
+        <div class="game-actions-row">
+          <button class="btn btn-danger" onclick="leaveGame()"><i class="fas fa-right-from-bracket"></i> الخروج من المنافسة</button>
+        </div>
+      </div>
+
+      <div id="game-result" style="display:none;">
+        <div class="result-banner" id="game-result-banner"></div>
+        <div class="game-actions-row">
+          <button class="btn btn-glow" onclick="leaveGame()"><i class="fas fa-arrow-right"></i> العودة للوبي</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: تأكيد قبول رابط التحدي -->
+<div class="overlay" id="challenge-confirm-overlay">
+  <div class="sheet" style="max-width:420px;">
+    <div class="sheet-head">
+      <h3><i class="fas fa-gamepad" style="color:var(--glow);"></i> دعوة تحدٍ</h3>
+      <button class="icon-btn" onclick="declineIncomingChallenge()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sheet-body" style="text-align:center;">
+      <div id="challenge-avatar" style="width:74px;height:74px;border-radius:50%;overflow:hidden;background:var(--surface-2);margin:6px auto 16px;display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-user" style="font-size:28px;color:var(--ink-muted);"></i>
+      </div>
+      <div style="font-size:15.5px;font-weight:800;margin-bottom:8px;" id="challenge-msg">شخص ما يتحداك في لعبة خمّن الشخصية!</div>
+      <div style="font-size:13px;color:var(--ink-muted);margin-bottom:20px;">هل توافق على خوض التحدي؟</div>
+      <div class="game-actions-row">
+        <button class="btn btn-glow" style="flex:1;" onclick="acceptIncomingChallenge()"><i class="fas fa-check"></i> نعم، ابدأ اللعب</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="declineIncomingChallenge()"><i class="fas fa-xmark"></i> لا، شكراً</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- عرض صورة/فيديو المالك بالحجم الكامل -->
+<div class="media-view-overlay" id="media-view-overlay" onclick="closeMediaView()">
+  <button class="media-view-close" onclick="event.stopPropagation();closeMediaView()"><i class="fas fa-xmark"></i></button>
+  <div id="media-view-content"></div>
+</div>
+
+</div>
+
+<script>
+/* ============================================================
+   إعداد Firebase — مشروع hhhhhh-65817
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyC9cE4s2FM1J9EmskV5PYHITRjn8AnBBK4",
+  authDomain: "hhhhhh-65817.firebaseapp.com",
+  databaseURL: "https://hhhhhh-65817-default-rtdb.firebaseio.com",
+  projectId: "hhhhhh-65817",
+  storageBucket: "hhhhhh-65817.firebasestorage.app",
+  messagingSenderId: "101221208426",
+  appId: "1:101221208426:web:207be03202e345c1f45513"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+// ---------- سجل تشخيص مرئي (يظهر مباشرة في الصفحة، مفيد لمعرفة سبب أي مشكلة دون أدوات المطوّر) ----------
+function debugLog(msg){
+  try{
+    const el = document.getElementById('auth-debug-log');
+    if (!el) return;
+    el.style.display = 'block';
+    const t = new Date().toLocaleTimeString('en-GB');
+    el.textContent += '['+t+'] ' + msg + '\n';
+    el.scrollTop = el.scrollHeight;
+  }catch(e){}
+  console.log('[DEBUG]', msg);
+}
+window.addEventListener('error', function(e){
+  debugLog('JS ERROR: ' + (e.message||'') + ' @ ' + (e.filename||'') + ':' + (e.lineno||''));
+});
+window.addEventListener('unhandledrejection', function(e){
+  debugLog('UNHANDLED PROMISE REJECTION: ' + (e.reason && (e.reason.code||e.reason.message||e.reason)));
+});
+debugLog('بدء الصفحة — hostname: ' + location.hostname);
+debugLog('authDomain المستخدم: ' + firebaseConfig.authDomain);
+
+// ---------- تسجيل الدخول الإلزامي بحساب جوجل (لحفظ معلومات المستخدم) ----------
+function showAuthGate(msg){
+  document.getElementById('auth-gate-screen').style.display = 'flex';
+  document.getElementById('auth-gate-error').textContent = msg || '';
+}
+function setAuthGateLoading(isLoading){
+  const btn = document.getElementById('google-signin-btn');
+  const loadingEl = document.getElementById('auth-gate-loading');
+  if (btn) btn.style.display = isLoading ? 'none' : 'flex';
+  if (loadingEl) loadingEl.style.display = isLoading ? 'flex' : 'none';
+}
+
+/* نستخدم إعادة التوجيه (redirect) بدل النافذة المنبثقة (popup)، لأن كثيراً من متصفحات
+   الجوال (خصوصاً غير كروم) لا تدعم النوافذ المنبثقة بشكل صحيح، فتفتح تبويباً كاملاً
+   ثم تفشل بخطأ "تم إغلاق نافذة تسجيل الدخول قبل إكمالها". إعادة التوجيه تعمل بثبات
+   في كل المتصفحات: تنقلك لصفحة جوجل لاختيار الحساب، ثم تعيدك للعبة تلقائياً. */
+async function signInWithGoogle(){
+  debugLog('تم الضغط على زر تسجيل الدخول');
+  try{ sessionStorage.setItem('gauth_redirect_pending', '1'); }catch(e){}
+  setAuthGateLoading(true);
+  showAuthGate('');
+  try{
+    debugLog('استدعاء signInWithRedirect...');
+    await auth.signInWithRedirect(googleProvider);
+    debugLog('تم استدعاء signInWithRedirect دون خطأ (يفترض الانتقال الآن)');
+  }catch(e){
+    try{ sessionStorage.removeItem('gauth_redirect_pending'); }catch(er){}
+    setAuthGateLoading(false);
+    debugLog('خطأ عند بدء تسجيل الدخول: ' + (e && e.code) + ' - ' + (e && e.message));
+    showAuthGate(describeAuthError(e));
+  }
+}
+function describeAuthError(err){
+  const code = err && err.code;
+  if (code === 'auth/unauthorized-domain') return 'هذا الموقع (' + location.hostname + ') غير مُضاف إلى قائمة النطاقات المسموحة في Firebase. أضِفه من: Authentication ← Settings ← Authorized domains.';
+  if (code === 'auth/operation-not-allowed') return 'تسجيل الدخول بجوجل غير مُفعّل في مشروع Firebase. فعّله من: Authentication ← Sign-in method ← Google.';
+  if (code === 'auth/invalid-api-key' || code === 'auth/api-key-not-valid') return 'إعدادات Firebase (firebaseConfig) غير صحيحة داخل ملف اللعبة.';
+  if (code === 'auth/network-request-failed') return 'تعذّر الاتصال بالإنترنت، تحقق من الشبكة وحاول مرة أخرى.';
+  if (code === 'auth/account-exists-with-different-credential') return 'هذا البريد الإلكتروني مستخدم مسبقاً بطريقة دخول مختلفة.';
+  return 'تعذّر تسجيل الدخول' + (code ? (' (' + code + ')') : '') + '، حاول مرة أخرى.';
+}
+function signOutUser(){
+  auth.signOut().then(()=>location.reload());
+}
+
+// إن كانت هناك عملية إعادة توجيه سابقة لم تكتمل بعد إعادة تحميل الصفحة، أظهر شاشة الانتظار فوراً
+try{
+  if (sessionStorage.getItem('gauth_redirect_pending') === '1'){
+    setAuthGateLoading(true);
+    debugLog('تم رصد عملية دخول معلّقة من قبل (sessionStorage) بعد إعادة تحميل الصفحة');
+  }
+}catch(e){}
+
+// بعد العودة من صفحة جوجل، تحقّق من نتيجة تسجيل الدخول واعرض أي خطأ بوضوح
+debugLog('استدعاء getRedirectResult...');
+auth.getRedirectResult().then(function(result){
+  try{ sessionStorage.removeItem('gauth_redirect_pending'); }catch(e){}
+  setAuthGateLoading(false);
+  if (result && result.user){
+    debugLog('نجح getRedirectResult ✓ — المستخدم: ' + result.user.email + ' (uid: ' + result.user.uid + ')');
+  } else {
+    debugLog('انتهى getRedirectResult بدون مستخدم (result فارغ) — لا توجد عملية دخول معلّقة');
+  }
+}).catch(function(err){
+  try{ sessionStorage.removeItem('gauth_redirect_pending'); }catch(e){}
+  setAuthGateLoading(false);
+  debugLog('فشل getRedirectResult ✗ — ' + (err && err.code) + ' - ' + (err && err.message));
+  showAuthGate(describeAuthError(err));
+});
+
+/* بعد نجاح تسجيل الدخول، يتم "حقن" وتشغيل بقية كود اللعبة (المخزّن أدناه
+   داخل وسم <script type="text/plain">) حتى لا يعمل أي جزء من اللعبة
+   قبل التحقق من هوية المستخدم عبر جوجل. */
+let appBooted = false;
+function bootApp(user){
+  if (appBooted) return;
+  appBooted = true;
+  debugLog('bootApp: بدء تشغيل اللعبة للمستخدم ' + user.email);
+  window.__googleProfile = {
+    uid: user.uid,
+    name: user.displayName || '',
+    email: user.email || '',
+    avatarUrl: user.photoURL || ''
+  };
+  const src = document.getElementById('app-source').textContent;
+  const s = document.createElement('script');
+  s.textContent = src;
+  document.body.appendChild(s);
+  debugLog('bootApp: تم حقن كود اللعبة (' + src.length + ' حرف)');
+}
+
+auth.onAuthStateChanged(function(user){
+  debugLog('onAuthStateChanged: ' + (user ? ('مسجّل دخول — ' + user.email) : 'غير مسجّل دخول (null)'));
+  if (user){
+    document.getElementById('auth-gate-screen').style.display = 'none';
+    document.getElementById('app-root').classList.add('visible');
+    bootApp(user);
+  } else {
+    document.getElementById('app-root').classList.remove('visible');
+    showAuthGate();
+  }
+});
+
+// ---------- شاشة الافتتاح ----------
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    document.getElementById('splash-screen').classList.add('hide');
+    // ظهور اللعبة أو بوابة تسجيل الدخول يتم التحكم به حسب حالة الدخول بجوجل أعلاه
+  }, 2200);
+});
+</script>
+
+<script type="text/plain" id="app-source">
+// ---------- هوية المستخدم (مأخوذة من حساب جوجل بعد تسجيل الدخول) ----------
+const __gp = window.__googleProfile || {};
+let currentUserId = __gp.uid;
+
+// ---------- الحضور اللحظي (لعرض عدد المتصلين الآن في لوحة التحكم) ----------
+try{
+  const myPresenceRef = db.ref('presence/'+currentUserId);
+  db.ref('.info/connected').on('value', snap=>{
+    if (snap.val() === true){
+      myPresenceRef.onDisconnect().remove();
+      myPresenceRef.set(true);
+    }
+  });
+}catch(e){}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* شعار التوثيق (نجمة زرقاء بـ 12 رأساً وعلامة صح بيضاء) */
+const VERIFIED_BADGE_SVG = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;"><polygon points="50.0,4.0 58.5,18.1 73.0,10.2 73.3,26.7 89.8,27.0 81.9,41.5 96.0,50.0 81.9,58.5 89.8,73.0 73.3,73.3 73.0,89.8 58.5,81.9 50.0,96.0 41.5,81.9 27.0,89.8 26.7,73.3 10.2,73.0 18.1,58.5 4.0,50.0 18.1,41.5 10.2,27.0 26.7,26.7 27.0,10.2 41.5,18.1" fill="#2f7de0"/><path d="M30 51 L44 65 L72 35" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function getPublicId(userId){
+  if (userId === 'admin') return '1-iD';
+  let hash = 0;
+  const str = String(userId||'');
+  for (let i=0;i<str.length;i++){ hash = (hash*31 + str.charCodeAt(i)) >>> 0; }
+  return String(10000000 + (hash % 90000000));
+}
+function showToast(text, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = text;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ---------- مظهر المنصة (يتحكم فيه الأدمن لكل الزوار) ----------
+const THEME_PRESETS = {
+  orange: { glow:'#f0b06c', glow2:'#e0925a', violet:'#a493ff', violetDim:'#6b5fa8' },
+  blue:   { glow:'#6ab7f0', glow2:'#4a95d6', violet:'#7dd3fc', violetDim:'#4a90b8' },
+  green:  { glow:'#7bd9a5', glow2:'#4fae80', violet:'#8fe3c0', violetDim:'#4a9070' },
+  pink:   { glow:'#f0a0c8', glow2:'#d67aab', violet:'#f5b8dc', violetDim:'#b8709c' },
+  red:    { glow:'#f07a6a', glow2:'#d6543f', violet:'#f5a89c', violetDim:'#b85f4f' },
+  purple: { glow:'#b89af0', glow2:'#9670d6', violet:'#c9aef7', violetDim:'#8560b8' }
+};
+function applyThemePreset(key){
+  const preset = THEME_PRESETS[key] || THEME_PRESETS.green;
+  const root = document.body;
+  root.style.setProperty('--glow', preset.glow);
+  root.style.setProperty('--glow-2', preset.glow2);
+  root.style.setProperty('--violet', preset.violet);
+  root.style.setProperty('--violet-dim', preset.violetDim);
+  currentEffectiveTheme = key;
+  updateColorPickerActiveState();
+}
+
+/* اللون الافتراضي للمنصة هو النعناعي؛ ويمكن لكل زائر اختيار لونه الخاص
+   من زر "تغيير اللون"، ويُحفظ اختياره على جهازه فقط دون التأثير على باقي الزوار. */
+const DEFAULT_APP_THEME = 'green';
+const PERSONAL_THEME_KEY = 'personal_theme_choice';
+let currentEffectiveTheme = DEFAULT_APP_THEME;
+function getPersonalTheme(){ return localStorage.getItem(PERSONAL_THEME_KEY); }
+
+applyThemePreset(getPersonalTheme() || DEFAULT_APP_THEME);
+db.ref('settings/appTheme').on('value', snap=>{
+  if (getPersonalTheme()) return; // اختيار المستخدم الشخصي له الأولوية دائماً
+  applyThemePreset(snap.val() || DEFAULT_APP_THEME);
+});
+
+function choosePersonalTheme(key){
+  localStorage.setItem(PERSONAL_THEME_KEY, key);
+  applyThemePreset(key);
+  closeColorPicker();
+  showToast('تم تغيير لون الواجهة، وسيبقى محفوظاً على جهازك','success');
+}
+function updateColorPickerActiveState(){
+  document.querySelectorAll('.cp-swatch').forEach(el=>{
+    el.classList.toggle('active', el.getAttribute('data-theme') === currentEffectiveTheme);
+  });
+}
+function toggleColorPicker(e){
+  if (e) e.stopPropagation();
+  document.getElementById('color-picker-pop').classList.toggle('show');
+}
+function closeColorPicker(){
+  document.getElementById('color-picker-pop').classList.remove('show');
+}
+document.addEventListener('click', (e)=>{
+  const wrap = document.querySelector('.color-picker-wrap');
+  if (wrap && !wrap.contains(e.target)) closeColorPicker();
+});
+
+// ---------- شاشة الافتتاح ----------
+function toggleTheme() {
+  const body = document.body;
+  const isDark = body.getAttribute('data-theme') === 'dark';
+  body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-toggle').innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+}
+
+// ---------- الزوار والمتابعون (مشتركة بين كل الأجهزة) ----------
+const visitorRef = db.ref('stats/visitorsCount');
+visitorRef.on('value', snap => {
+  const vCount = (snap.val()||0).toLocaleString('ar');
+  document.getElementById('visitor-count').textContent = vCount;
+  const pv = document.getElementById('profile-visitors-num');
+  if (pv) pv.textContent = vCount;
+});
+if (!sessionStorage.getItem('dihka_visited')) {
+  sessionStorage.setItem('dihka_visited', 'true');
+  visitorRef.transaction(c => (c||0)+1);
+}
+
+let isFollowing = localStorage.getItem('dihka_following') === 'true';
+const followersRef = db.ref('stats/followersCount');
+followersRef.transaction(c => c === null ? 200 : c);
+followersRef.on('value', snap => {
+  const count = snap.val() != null ? snap.val() : 200;
+  document.getElementById('follow-count').textContent = count.toLocaleString('ar');
+  const btn = document.getElementById('follow-btn');
+  btn.classList.toggle('following', isFollowing);
+  document.getElementById('follow-icon').className = isFollowing ? 'fas fa-heart' : 'far fa-heart';
+  document.getElementById('follow-label').textContent = isFollowing ? 'تمت المتابعة' : 'متابعة';
+  const pFollowIcon = document.getElementById('profile-follow-icon');
+  if (pFollowIcon){
+    document.getElementById('profile-followers-num').textContent = count.toLocaleString('ar');
+    pFollowIcon.className = isFollowing ? 'fas fa-heart' : 'far fa-heart';
+    document.getElementById('profile-follow-label').textContent = isFollowing ? 'تمت المتابعة' : 'متابعة';
+    document.getElementById('profile-follow-btn').classList.toggle('following', isFollowing);
+  }
+});
+async function toggleFollow(){
+  const btn = document.getElementById('follow-btn');
+  btn.disabled = true;
+  try{
+    if (!isFollowing){
+      await followersRef.transaction(c => (c||200)+1);
+      isFollowing = true; localStorage.setItem('dihka_following','true');
+      showToast('شكراً لمتابعتك المنصة! ❤️','success');
+      renderContactSection();
+    } else {
+      await followersRef.transaction(c => Math.max((c||201)-1,200));
+      isFollowing = false; localStorage.setItem('dihka_following','false');
+      showToast('تم إلغاء المتابعة');
+      renderContactSection();
+    }
+  }catch(e){ showToast('تعذّرت العملية','error'); }
+  btn.disabled = false;
+}
+
+// ---------- الملف الشخصي لصاحب المنصة (فخم) ----------
+let ownerProfile = {};
+let ownerTitles = [];
+let ownerMedia = {};
+
+db.ref('settings/ownerProfile').on('value', snap=>{
+  const v = snap.val() || {};
+  ownerProfile = { name:v.name||'مالك المنصة', bio:v.bio||'', contact:v.contact||'', verified:!!v.verified, vip:!!v.vip, frame:v.frame||'none', avatarVideo:v.avatarVideo||'' };
+  updateOwnerProfileHeader();
+});
+db.ref('settings/ownerProfile/titles').on('value', snap=>{
+  const v = snap.val() || {};
+  ownerTitles = Object.values(v);
+  renderOwnerTitles();
+});
+db.ref('settings/ownerMedia').on('value', snap=>{
+  ownerMedia = snap.val() || {};
+  renderOwnerMedia();
+});
+
+function updateOwnerProfileHeader(){
+  document.getElementById('profile-owner-name').textContent = ownerProfile.name || 'مالك المنصة';
+  const profileBadge = document.getElementById('profile-verified-badge');
+  profileBadge.style.display = ownerProfile.verified ? 'inline-flex' : 'none';
+  if (ownerProfile.verified) profileBadge.innerHTML = VERIFIED_BADGE_SVG;
+  document.getElementById('profile-vip-badge').style.display = ownerProfile.vip ? 'inline-flex' : 'none';
+  document.getElementById('profile-bio').textContent = ownerProfile.bio || '';
+  document.getElementById('profile-bio').style.display = ownerProfile.bio ? 'block' : 'none';
+  const frameEl = document.getElementById('profile-avatar-frame');
+  frameEl.className = 'avatar-frame frame-' + (ownerProfile.frame || 'none');
+  frameEl.innerHTML = ownerProfile.avatarVideo
+    ? `<video src="${ownerProfile.avatarVideo}" autoplay loop muted playsinline></video>`
+    : `<i class="fas fa-crown" style="font-size:34px;color:var(--glow);position:relative;z-index:3;"></i>`;
+
+  // شريط مالك المنصة أعلى الشاشة
+  document.getElementById('strip-owner-name').textContent = ownerProfile.name || 'مالك المنصة';
+  const stripBadge = document.getElementById('strip-verified-badge');
+  stripBadge.style.display = ownerProfile.verified ? 'inline-flex' : 'none';
+  if (ownerProfile.verified) stripBadge.innerHTML = VERIFIED_BADGE_SVG;
+  document.getElementById('strip-vip-badge').style.display = ownerProfile.vip ? 'inline-flex' : 'none';
+  const stripFrame = document.getElementById('strip-avatar-frame');
+  stripFrame.className = 'avatar-frame frame-' + (ownerProfile.frame || 'none');
+  const stripVideo = document.getElementById('strip-avatar-video');
+  const stripFallback = document.getElementById('strip-avatar-fallback');
+  if (ownerProfile.avatarVideo){ stripVideo.src = ownerProfile.avatarVideo; stripVideo.style.display='block'; stripFallback.style.display='none'; }
+  else { stripVideo.style.display='none'; stripFallback.style.display='inline'; }
+}
+function renderOwnerTitles(){
+  const wrap = document.getElementById('profile-titles');
+  wrap.innerHTML = ownerTitles.map(t=>`<span class="title-pill"><i class="fas fa-gem"></i> ${escapeHtml(t)}</span>`).join('');
+}
+function renderOwnerMedia(){
+  const grid = document.getElementById('profile-media-grid');
+  const empty = document.getElementById('no-owner-media');
+  const list = Object.entries(ownerMedia).map(([id,m])=>({id,...m})).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+  if (!list.length){ grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = list.map(m=>{
+    if (m.type === 'video'){
+      return `<div class="profile-media-item" onclick='openMediaView(${JSON.stringify(m).replace(/'/g,"&#39;")})'><video src="${m.src}" muted></video><div class="play-badge"><i class="fas fa-circle-play"></i></div></div>`;
+    }
+    return `<div class="profile-media-item" onclick='openMediaView(${JSON.stringify(m).replace(/'/g,"&#39;")})'><img src="${m.src}" alt=""></div>`;
+  }).join('');
+}
+function openMediaView(m){
+  const content = document.getElementById('media-view-content');
+  content.innerHTML = m.type === 'video'
+    ? `<video src="${m.src}" controls autoplay style="max-width:100%;max-height:85vh;border-radius:10px;"></video>`
+    : `<img src="${m.src}" alt="">`;
+  document.getElementById('media-view-overlay').classList.add('show');
+}
+function closeMediaView(){
+  document.getElementById('media-view-overlay').classList.remove('show');
+  document.getElementById('media-view-content').innerHTML = '';
+}
+function openOwnerProfile(){
+  updateOwnerProfileHeader();
+  renderOwnerTitles();
+  renderOwnerMedia();
+  document.getElementById('profile-followers-num').textContent = document.getElementById('follow-count').textContent;
+  document.getElementById('profile-visitors-num').textContent = document.getElementById('visitor-count').textContent;
+  document.getElementById('profile-follow-icon').className = document.getElementById('follow-icon').className;
+  document.getElementById('profile-follow-label').textContent = document.getElementById('follow-label').textContent;
+  document.getElementById('profile-follow-btn').classList.toggle('following', isFollowing);
+  renderContactSection();
+  document.getElementById('owner-profile-overlay').classList.add('show');
+}
+function closeOwnerProfile(){
+  document.getElementById('owner-profile-overlay').classList.remove('show');
+}
+
+// ---------- طلب التواصل مع المالك (يظهر بعد المتابعة) ----------
+let myContactRequest = null;
+db.ref('contactRequests/'+currentUserId).on('value', snap=>{
+  myContactRequest = snap.val();
+  renderContactSection();
+});
+function renderContactSection(){
+  const box = document.getElementById('contact-section');
+  if (!box) return;
+  if (!isFollowing){
+    box.innerHTML = `<div class="contact-status-note"><i class="fas fa-lock"></i> تابع المنصة أولاً حتى يظهر لك زر التواصل مع المالك</div>`;
+    return;
+  }
+  const status = myContactRequest ? myContactRequest.status : null;
+  if (!status || status === 'declined'){
+    box.innerHTML = `
+      ${status==='declined' ? '<div class="contact-status-note">تم رفض طلبك السابق، يمكنك المحاولة مرة أخرى.</div>' : ''}
+      <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="sendContactRequest()"><i class="fas fa-paper-plane"></i> طلب التواصل مع المالك</button>
+    `;
+  } else if (status === 'pending'){
+    box.innerHTML = `<button class="btn btn-secondary" style="width:100%;margin-top:8px;" disabled><i class="fas fa-hourglass-half"></i> بانتظار موافقة المالك...</button>`;
+  } else if (status === 'approved'){
+    box.innerHTML = `
+      <button class="btn btn-glow" style="width:100%;margin-top:8px;" onclick="openChatModal()"><i class="fas fa-comments"></i> راسل المالك</button>
+      ${ownerProfile.contact ? `<div class="contact-status-note">أو تواصل عبر: <a href="${ownerProfile.contact}" target="_blank">هذا الرابط</a></div>` : ''}
+    `;
+  }
+}
+async function sendContactRequest(){
+  try{
+    await db.ref('contactRequests/'+currentUserId).set({ status:'pending', timestamp: Date.now() });
+    showToast('تم إرسال طلبك، بانتظار موافقة المالك','success');
+  }catch(e){ showToast('تعذّر إرسال الطلب','error'); }
+}
+
+// ---------- محادثة المستخدم مع المالك ----------
+let chatMsgsCache = {};
+function openChatModal(){
+  db.ref('conversations/'+currentUserId+'/messages').orderByChild('timestamp').on('value', snap=>{
+    chatMsgsCache = snap.val() || {};
+    renderChatThread();
+  });
+  document.getElementById('chat-overlay').classList.add('show');
+}
+function closeChatModal(){
+  db.ref('conversations/'+currentUserId+'/messages').off();
+  document.getElementById('chat-overlay').classList.remove('show');
+}
+function renderChatThread(){
+  const thread = document.getElementById('chat-thread');
+  const empty = document.getElementById('chat-empty');
+  const msgs = Object.values(chatMsgsCache).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  if (!msgs.length){ thread.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  const op = ownerProfile || {};
+  const ownerTag = `
+    <div class="chat-owner-tag">
+      <span class="avatar-frame frame-${op.frame||'none'}" style="width:20px;height:20px;">
+        ${op.avatarVideo ? `<video src="${op.avatarVideo}" autoplay loop muted playsinline></video>` : `<i class="fas fa-crown" style="font-size:9px;color:var(--glow);position:relative;z-index:3;"></i>`}
+      </span>
+      <span>${escapeHtml(op.name||'مالك المنصة')}</span>
+      ${op.verified ? `<span class="verified-badge" style="width:13px;height:13px;">${VERIFIED_BADGE_SVG}</span>` : ''}
+      ${op.vip ? `<span class="vip-badge" style="font-size:8px;padding:1px 6px;"><i class="fas fa-crown"></i> VIP</span>` : ''}
+    </div>`;
+  thread.innerHTML = msgs.map(m=>{
+    if (m.from === 'owner'){
+      return `<div class="chat-bubble-wrap owner">${ownerTag}<div class="chat-bubble owner">${escapeHtml(m.text||'')}</div></div>`;
+    }
+    return `<div class="chat-bubble me">${escapeHtml(m.text||'')}</div>`;
+  }).join('');
+  thread.scrollTop = thread.scrollHeight;
+}
+async function sendChatMessage(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  try{
+    await db.ref('conversations/'+currentUserId+'/messages').push({ from:'user', text, timestamp: Date.now() });
+    await db.ref('contactRequests/'+currentUserId).update({ lastMessageAt: Date.now() });
+  }catch(e){ showToast('تعذّر إرسال الرسالة','error'); }
+}
+
+/* =========================================================
+   الملفات الشخصية للمستخدمين + الأصدقاء + لعبة خمّن الشخصية
+   ========================================================= */
+
+// ---------- ملفي الشخصي ----------
+const myPublicId = getPublicId(currentUserId);
+let myProfile = { name: '', avatarUrl: null };
+(function ensureMyProfile(){
+  db.ref('users/'+currentUserId).once('value').then(snap=>{
+    if (!snap.exists()){
+      db.ref('users/'+currentUserId).set({
+        name: __gp.name || ('مستخدم '+myPublicId),
+        avatarUrl: __gp.avatarUrl || null,
+        email: __gp.email || null,
+        googleLinked: true,
+        publicId: myPublicId,
+        createdAt: Date.now(),
+        lastLoginAt: Date.now()
+      });
+    } else {
+      // تحديث البريد وتاريخ آخر دخول عند كل تسجيل دخول، دون المساس بالاسم/الصورة التي اختارها المستخدم داخل اللعبة
+      db.ref('users/'+currentUserId).update({
+        email: __gp.email || (snap.val() && snap.val().email) || null,
+        googleLinked: true,
+        lastLoginAt: Date.now()
+      });
+    }
+  });
+  db.ref('publicIdIndex/'+myPublicId).once('value').then(snap=>{
+    if (!snap.exists()) db.ref('publicIdIndex/'+myPublicId).set(currentUserId);
+  });
+})();
+db.ref('users/'+currentUserId).on('value', snap=>{
+  myProfile = snap.val() || { name:'مستخدم '+myPublicId, avatarUrl:null };
+  usersCache[currentUserId] = myProfile;
+  refreshMyProfileUI();
+});
+
+let usersCache = {};
+let usersLoading = new Set();
+function getUserAvatarHtml(uid){
+  const u = usersCache[uid];
+  if (u === undefined && !usersLoading.has(uid)) loadUserProfile(uid);
+  if (u && u.avatarUrl) return `<img src="${u.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  return `<i class="fas fa-user" style="font-size:13px;color:var(--ink-muted);position:relative;z-index:3;"></i>`;
+}
+function getUserName(uid){
+  const u = usersCache[uid];
+  return u && u.name ? u.name : ('مستخدم '+getPublicId(uid));
+}
+function loadUserProfile(uid){
+  usersLoading.add(uid);
+  db.ref('users/'+uid).once('value').then(snap=>{
+    usersCache[uid] = snap.val() || null;
+    usersLoading.delete(uid);
+    renderFriendsList();
+    renderGameFriendsList();
+    renderFriendRequests();
+    renderGameInvites();
+    if (viewedUserId === uid) renderViewUser();
+  }).catch(()=>{ usersLoading.delete(uid); });
+}
+
+function refreshMyProfileUI(){
+  document.getElementById('my-id-value').textContent = myPublicId;
+  document.getElementById('my-name-input').value = myProfile.name || '';
+  document.getElementById('my-google-email').textContent = (myProfile.email || __gp.email || '');
+  const img = document.getElementById('my-avatar-img');
+  const ph = document.getElementById('my-avatar-placeholder');
+  if (myProfile.avatarUrl){ img.src = myProfile.avatarUrl; img.style.display='block'; ph.style.display='none'; }
+  else { img.style.display='none'; ph.style.display='block'; }
+}
+function openMyProfile(focusSection){
+  refreshMyProfileUI();
+  document.getElementById('my-profile-overlay').classList.add('show');
+  if (focusSection === 'friends'){
+    setTimeout(()=>{
+      document.getElementById('friends-section')?.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 250);
+  }
+}
+function closeMyProfile(){
+  document.getElementById('my-profile-overlay').classList.remove('show');
+}
+async function saveMyName(){
+  const name = document.getElementById('my-name-input').value.trim();
+  if (!name){ showToast('اكتب اسماً صالحاً','error'); return; }
+  try{ await db.ref('users/'+currentUserId+'/name').set(name); showToast('تم حفظ الاسم','success'); }
+  catch(e){ showToast('تعذّر الحفظ','error'); }
+}
+function copyMyId(){
+  navigator.clipboard.writeText(myPublicId).then(()=>showToast('تم نسخ الأيدي!','success')).catch(()=>showToast('تعذّر النسخ','error'));
+}
+function handleMyAvatarSelect(e){
+  const file = e.target.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_DIM = 400;
+      let w = img.width, h = img.height;
+      if (w > MAX_DIM || h > MAX_DIM){
+        if (w > h){ h = Math.round(h*MAX_DIM/w); w = MAX_DIM; } else { w = Math.round(w*MAX_DIM/h); h = MAX_DIM; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      (async () => {
+        try{
+          showToast('جاري حفظ الصورة...');
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          await db.ref('users/'+currentUserId+'/avatarUrl').set(dataUrl);
+          showToast('تم تحديث صورتك الشخصية!','success');
+        }catch(err){ showToast('تعذّر حفظ الصورة، جرّب صورة أصغر','error'); }
+      })();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---------- البحث عن مستخدم / عرض ملفه ----------
+let viewedUserId = null;
+function openViewUser(uid){
+  viewedUserId = uid;
+  if (usersCache[uid] === undefined) loadUserProfile(uid);
+  renderViewUser();
+  document.getElementById('view-user-overlay').classList.add('show');
+}
+function closeViewUser(){ document.getElementById('view-user-overlay').classList.remove('show'); }
+function renderViewUser(){
+  if (!viewedUserId) return;
+  const u = usersCache[viewedUserId] || {};
+  document.getElementById('view-user-name').textContent = u.name || ('مستخدم '+getPublicId(viewedUserId));
+  document.getElementById('view-user-id').textContent = getPublicId(viewedUserId);
+  const img = document.getElementById('view-user-avatar');
+  const ph = document.getElementById('view-user-placeholder');
+  if (u.avatarUrl){ img.src = u.avatarUrl; img.style.display='block'; ph.style.display='none'; }
+  else { img.style.display='none'; ph.style.display='block'; }
+  const actions = document.getElementById('view-user-actions');
+  if (viewedUserId === currentUserId){ actions.innerHTML=''; return; }
+  const isFriend = !!friendsCache[viewedUserId];
+  const isBlocked = !!blocksCache[viewedUserId];
+  let html = '';
+  if (isBlocked){
+    html += `<button class="btn btn-secondary" onclick="unblockUser('${viewedUserId}');closeViewUser();"><i class="fas fa-user-check"></i> إلغاء الحظر</button>`;
+  } else {
+    if (isFriend){
+      html += `<button class="btn btn-glow" onclick="closeViewUser();sendGameInviteAndOpen('${viewedUserId}')"><i class="fas fa-gamepad"></i> تحدَّه في اللعبة</button>`;
+      html += `<button class="btn btn-danger" onclick="removeFriend('${viewedUserId}');closeViewUser();"><i class="fas fa-user-xmark"></i> حذف من الأصدقاء</button>`;
+    } else {
+      html += `<button class="btn btn-secondary" onclick="sendFriendRequestTo('${viewedUserId}');closeViewUser();"><i class="fas fa-user-plus"></i> إرسال طلب صداقة</button>`;
+    }
+    html += `<button class="btn btn-secondary" onclick="blockUser('${viewedUserId}');closeViewUser();"><i class="fas fa-user-slash"></i> حظر هذا المستخدم</button>`;
+  }
+  actions.innerHTML = html;
+}
+
+// ---------- بحث المستخدمين من الشاشة الرئيسية ----------
+function focusHomeSearch(){
+  const input = document.getElementById('home-search-input');
+  input.scrollIntoView({behavior:'smooth', block:'center'});
+  setTimeout(()=> input.focus(), 300);
+}
+let homeSearchTimeout = null;
+function handleHomeSearchInput(){
+  clearTimeout(homeSearchTimeout);
+  const val = document.getElementById('home-search-input').value.trim();
+  const box = document.getElementById('home-search-results');
+  if (!val){ box.innerHTML = ''; return; }
+  homeSearchTimeout = setTimeout(()=> runHomeSearch(val), 350);
+}
+function runHomeSearch(val){
+  const box = document.getElementById('home-search-results');
+  box.innerHTML = `<div class="empty-note">جاري البحث...</div>`;
+
+  const normalized = val.replace(/\s+/g,'').toLowerCase();
+  if (normalized === '1-id' || normalized === 'id-1' || normalized === '1'){
+    const op = ownerProfile || {};
+    box.innerHTML = `
+      <div class="user-row">
+        <div class="u-avatar">
+          <span class="avatar-frame frame-${op.frame||'none'}" style="width:34px;height:34px;">
+            ${op.avatarVideo ? `<video src="${op.avatarVideo}" autoplay loop muted playsinline></video>` : `<i class="fas fa-crown" style="color:var(--glow);position:relative;z-index:3;"></i>`}
+          </span>
+        </div>
+        <div class="u-info">
+          <div class="u-name">${escapeHtml(op.name||'مالك المنصة')} ${op.verified ? `<span class="verified-badge" style="width:13px;height:13px;">${VERIFIED_BADGE_SVG}</span>` : ''}</div>
+          <div class="u-id id-badge owner">1-iD</div>
+        </div>
+        <div class="u-actions"><button class="btn btn-glow" onclick="openOwnerProfile();">عرض الملف</button></div>
+      </div>`;
+    return;
+  }
+
+  db.ref('publicIdIndex/'+val).once('value').then(snap=>{
+    const uid = snap.val();
+    if (!uid){ box.innerHTML = `<div class="empty-note">لم يتم العثور على أي مستخدم بهذا الأيدي</div>`; return; }
+    if (uid === currentUserId){ box.innerHTML = `<div class="empty-note">هذا أيديك أنت 🙂</div>`; return; }
+    if (usersCache[uid] === undefined) loadUserProfile(uid);
+    setTimeout(()=>{
+      const u = usersCache[uid] || {};
+      const isFriend = !!friendsCache[uid];
+      box.innerHTML = `
+        <div class="user-row">
+          <div class="u-avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : '<i class="fas fa-user" style="color:var(--ink-muted);"></i>'}</div>
+          <div class="u-info"><div class="u-name">${escapeHtml(u.name||'مستخدم')}</div><div class="u-id">iD ${escapeHtml(val)}</div></div>
+          <div class="u-actions">
+            <button class="btn btn-glow" onclick="sendGameInviteAndOpen('${uid}')" title="تحدٍّ"><i class="fas fa-gamepad"></i></button>
+            ${isFriend ? '' : `<button class="btn btn-secondary" onclick="sendFriendRequestTo('${uid}')">إضافة صديق</button>`}
+          </div>
+        </div>`;
+    }, 300);
+  }).catch(()=>{ box.innerHTML = `<div class="empty-note">حدث خطأ أثناء البحث</div>`; });
+}
+
+async function sendFriendRequestTo(uid){
+  if (blocksCache[uid]){ showToast('لقد قمت بحظر هذا المستخدم','error'); return; }
+  try{
+    const theyBlockedMe = (await db.ref('blocks/'+uid+'/'+currentUserId).once('value')).val();
+    if (theyBlockedMe){ showToast('لا يمكنك إرسال طلب لهذا المستخدم','error'); return; }
+    await db.ref('friendRequests/'+uid+'/'+currentUserId).set({ status:'pending', timestamp:Date.now() });
+    showToast('تم إرسال طلب الصداقة','success');
+  }catch(e){ showToast('تعذّر إرسال الطلب','error'); }
+}
+
+// ---------- طلبات الصداقة الواردة ----------
+let friendRequestsCache = {};
+function renderFriendRequests(){
+  const reqs = friendRequestsCache || {};
+  const box = document.getElementById('friend-requests-list');
+  const ids = Object.keys(reqs);
+  if (!ids.length){ box.innerHTML = `<div class="empty-note">لا توجد طلبات حالياً</div>`; return; }
+  box.innerHTML = ids.map(fromUid=>{
+    if (usersCache[fromUid]===undefined) loadUserProfile(fromUid);
+    const u = usersCache[fromUid] || {};
+    return `
+      <div class="user-row">
+        <div class="u-avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : '<i class="fas fa-user" style="color:var(--ink-muted);"></i>'}</div>
+        <div class="u-info"><div class="u-name">${escapeHtml(u.name||'مستخدم')}</div><div class="u-id">iD ${getPublicId(fromUid)}</div></div>
+        <div class="u-actions">
+          <button class="btn btn-glow" onclick="acceptFriendRequest('${fromUid}')"><i class="fas fa-check"></i></button>
+          <button class="btn btn-danger" onclick="rejectFriendRequest('${fromUid}')"><i class="fas fa-xmark"></i></button>
+        </div>
+      </div>`;
+  }).join('');
+}
+db.ref('friendRequests/'+currentUserId).on('value', snap=>{
+  friendRequestsCache = snap.val() || {};
+  renderFriendRequests();
+});
+async function acceptFriendRequest(fromUid){
+  try{
+    await db.ref('friends/'+currentUserId+'/'+fromUid).set(true);
+    await db.ref('friends/'+fromUid+'/'+currentUserId).set(true);
+    await db.ref('friendRequests/'+currentUserId+'/'+fromUid).remove();
+    showToast('أصبحتما أصدقاء!','success');
+  }catch(e){ showToast('تعذّرت العملية','error'); }
+}
+async function rejectFriendRequest(fromUid){
+  try{ await db.ref('friendRequests/'+currentUserId+'/'+fromUid).remove(); }catch(e){}
+}
+
+// ---------- قائمة الأصدقاء ----------
+let friendsCache = {};
+db.ref('friends/'+currentUserId).on('value', snap=>{
+  friendsCache = snap.val() || {};
+  renderFriendsList();
+  renderGameFriendsList();
+});
+function renderFriendsList(){
+  const box = document.getElementById('friends-list');
+  const ids = Object.keys(friendsCache);
+  if (!ids.length){ box.innerHTML = `<div class="empty-note">لا يوجد أصدقاء بعد</div>`; return; }
+  box.innerHTML = ids.map(fid=>{
+    if (usersCache[fid]===undefined) loadUserProfile(fid);
+    const u = usersCache[fid] || {};
+    return `
+      <div class="user-row">
+        <div class="u-avatar" style="cursor:pointer;" onclick="closeMyProfile();openViewUser('${fid}')">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : '<i class="fas fa-user" style="color:var(--ink-muted);"></i>'}</div>
+        <div class="u-info" style="cursor:pointer;" onclick="closeMyProfile();openViewUser('${fid}')"><div class="u-name">${escapeHtml(u.name||'مستخدم')}</div><div class="u-id">iD ${getPublicId(fid)}</div></div>
+        <div class="u-actions">
+          <button class="btn btn-glow" onclick="closeMyProfile();sendGameInviteAndOpen('${fid}')" title="تحدّي"><i class="fas fa-gamepad"></i></button>
+          <button class="btn btn-secondary" onclick="blockUser('${fid}')" title="حظر"><i class="fas fa-user-slash"></i></button>
+          <button class="btn btn-danger" onclick="removeFriend('${fid}')" title="حذف من الأصدقاء"><i class="fas fa-user-xmark"></i></button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---------- الحظر ----------
+let blocksCache = {};
+db.ref('blocks/'+currentUserId).on('value', snap=>{
+  blocksCache = snap.val() || {};
+  renderFriendsList();
+  renderGameFriendsList();
+  renderBlockedList();
+  if (viewedUserId) renderViewUser();
+});
+function renderBlockedList(){
+  const box = document.getElementById('blocked-list');
+  const ids = Object.keys(blocksCache);
+  if (!ids.length){ box.innerHTML = `<div class="empty-note">لا يوجد محظورون</div>`; return; }
+  box.innerHTML = ids.map(uid=>{
+    if (usersCache[uid]===undefined) loadUserProfile(uid);
+    const u = usersCache[uid] || {};
+    return `
+      <div class="user-row">
+        <div class="u-avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : '<i class="fas fa-user" style="color:var(--ink-muted);"></i>'}</div>
+        <div class="u-info"><div class="u-name">${escapeHtml(u.name||'مستخدم')}</div><div class="u-id">iD ${getPublicId(uid)}</div></div>
+        <div class="u-actions"><button class="btn btn-secondary" onclick="unblockUser('${uid}')"><i class="fas fa-user-check"></i> إلغاء الحظر</button></div>
+      </div>`;
+  }).join('');
+}
+async function blockUser(uid){
+  if (uid === currentUserId) return;
+  try{
+    await db.ref('blocks/'+currentUserId+'/'+uid).set(true);
+    await db.ref('friends/'+currentUserId+'/'+uid).remove();
+    await db.ref('friends/'+uid+'/'+currentUserId).remove();
+    await db.ref('friendRequests/'+currentUserId+'/'+uid).remove();
+    showToast('تم حظر المستخدم','success');
+  }catch(e){ showToast('تعذّر الحظر','error'); }
+}
+async function unblockUser(uid){
+  try{ await db.ref('blocks/'+currentUserId+'/'+uid).remove(); showToast('تم إلغاء الحظر','success'); }
+  catch(e){ showToast('تعذّرت العملية','error'); }
+}
+async function removeFriend(uid){
+  try{
+    await db.ref('friends/'+currentUserId+'/'+uid).remove();
+    await db.ref('friends/'+uid+'/'+currentUserId).remove();
+    showToast('تم حذف الصديق','success');
+  }catch(e){ showToast('تعذّر الحذف','error'); }
+}
+
+/* =========================================================
+   لعبة خمّن الشخصية
+   ========================================================= */
+let gameImagesCache = {};
+db.ref('gameImages').on('value', snap=>{ gameImagesCache = snap.val() || {}; });
+
+function pickRandomImageId(excludeId){
+  const ids = Object.keys(gameImagesCache).filter(id=>id!==excludeId);
+  if (!ids.length) return null;
+  return ids[Math.floor(Math.random()*ids.length)];
+}
+
+function openGameOverlay(){
+  document.getElementById('game-overlay').classList.add('show');
+  renderGameFriendsList();
+}
+function closeGameOverlay(){
+  document.getElementById('game-overlay').classList.remove('show');
+}
+let allUsersCache = {};
+let allUsersLoaded = false;
+function loadAllUsersOnce(){
+  if (allUsersLoaded) return Promise.resolve();
+  return db.ref('users').once('value').then(snap=>{
+    allUsersCache = snap.val() || {};
+    allUsersLoaded = true;
+    renderGameFriendsList();
+  }).catch(()=>{});
+}
+function renderGameFriendsList(){
+  const box = document.getElementById('game-friends-list');
+  if (!allUsersLoaded){ box.innerHTML = `<div class="empty-note">جاري تحميل المستخدمين...</div>`; loadAllUsersOnce(); return; }
+  const ids = Object.keys(allUsersCache).filter(uid=>uid !== currentUserId && !blocksCache[uid]);
+  if (!ids.length){ box.innerHTML = `<div class="empty-note">لا يوجد مستخدمون آخرون بعد</div>`; return; }
+  box.innerHTML = ids.map(uid=>{
+    const u = allUsersCache[uid] || {};
+    const isFriend = !!friendsCache[uid];
+    return `
+      <div class="user-row">
+        <div class="u-avatar" style="cursor:pointer;" onclick="openViewUser('${uid}')">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : '<i class="fas fa-user" style="color:var(--ink-muted);"></i>'}</div>
+        <div class="u-info" style="cursor:pointer;" onclick="openViewUser('${uid}')"><div class="u-name">${escapeHtml(u.name||'مستخدم')}</div></div>
+        <div class="u-actions">
+          <button class="btn btn-glow" onclick="sendGameInviteAndOpen('${uid}')" title="تحدٍّ"><i class="fas fa-gamepad"></i></button>
+          ${isFriend ? '' : `<button class="btn btn-secondary" onclick="sendFriendRequestTo('${uid}')" title="طلب صداقة"><i class="fas fa-user-plus"></i></button>`}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function createQuickMatchInvite(){
+  const ids = Object.keys(gameImagesCache);
+  if (ids.length < 2){ showToast('يحتاج الأدمن لإضافة صورتين على الأقل في لوحة التحكم أولاً','error'); return; }
+  try{
+    const gid = db.ref('games').push().key;
+    const img1 = pickRandomImageId();
+    await db.ref('games/'+gid).set({ player1: currentUserId, player2: null, player1Image: img1, player2Image: null, status: 'waiting', createdAt: Date.now() });
+    await db.ref('activeGameFor/'+currentUserId).set(gid);
+    const link = location.origin + location.pathname + '?game=' + gid;
+    const filenameHasNonAscii = /[^\x00-\x7F]/.test(location.pathname);
+    const inPreviewFrame = window.top !== window.self;
+    let warningHtml = '';
+    if (inPreviewFrame){
+      warningHtml += `<div class="empty-note" style="color:var(--danger);">⚠️ أنت الآن داخل وضع المعاينة. جرّب الرابط بعد نشر الموقع فعلياً، فمعاينة المحرر لا تُنشئ رابطاً حقيقياً قابلاً للمشاركة.</div>`;
+    } else if (filenameHasNonAscii){
+      warningHtml += `<div class="empty-note" style="color:var(--danger);">⚠️ اسم ملف الموقع يحتوي حروفاً عربية، وهذا قد يمنع بعض التطبيقات (واتساب/انستقرام/تيك توك) من التعرّف على الرابط بشكل صحيح. يُفضّل رفع الملف على الاستضافة باسم إنجليزي بسيط مثل index.html.</div>`;
+    }
+    document.getElementById('quick-match-link-box').innerHTML = `
+      <div class="game-link-box"><i class="fas fa-link"></i> ${link}</div>
+      <button class="btn btn-secondary" style="width:100%;margin-top:6px;" onclick="navigator.clipboard.writeText('${link}').then(()=>showToast('تم نسخ الرابط، أرسله لصديقك!','success'))"><i class="fas fa-copy"></i> نسخ الرابط</button>
+      ${warningHtml}
+      <div class="empty-note">بانتظار انضمام الخصم عبر الرابط...</div>`;
+  }catch(e){ showToast('تعذّر إنشاء المنافسة','error'); }
+}
+
+async function sendGameInvite(toUid){
+  if (blocksCache[toUid]){ showToast('لقد قمت بحظر هذا المستخدم','error'); return; }
+  try{
+    const theyBlockedMe = (await db.ref('blocks/'+toUid+'/'+currentUserId).once('value')).val();
+    if (theyBlockedMe){ showToast('لا يمكنك تحدّي هذا المستخدم','error'); return; }
+    await db.ref('gameInvites/'+toUid).push({ fromUid: currentUserId, timestamp: Date.now() });
+    showToast('تم إرسال دعوة المنافسة!','success');
+  }catch(e){ showToast('تعذّر إرسال الدعوة','error'); }
+}
+function sendGameInviteAndOpen(toUid){
+  sendGameInvite(toUid);
+  openGameOverlay();
+}
+
+let gameInvitesCache = {};
+let seenGameInviteIds = new Set();
+function renderGameInvites(){
+  const invites = gameInvitesCache || {};
+  const box = document.getElementById('game-invites-list');
+  const ids = Object.keys(invites);
+  if (!ids.length){ box.innerHTML = `<div class="empty-note">لا توجد دعوات حالياً</div>`; return; }
+  box.innerHTML = ids.map(iid=>{
+    const inv = invites[iid];
+    if (usersCache[inv.fromUid]===undefined) loadUserProfile(inv.fromUid);
+    const u = usersCache[inv.fromUid] || {};
+    return `
+      <div class="user-row">
+        <div class="u-avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : '<i class="fas fa-user" style="color:var(--ink-muted);"></i>'}</div>
+        <div class="u-info"><div class="u-name">${escapeHtml(u.name||'مستخدم')} يتحدّاك!</div></div>
+        <div class="u-actions">
+          <button class="btn btn-glow" onclick="acceptGameInvite('${iid}','${inv.fromUid}')"><i class="fas fa-check"></i></button>
+          <button class="btn btn-danger" onclick="db.ref('gameInvites/'+currentUserId+'/'+'${iid}').remove()"><i class="fas fa-xmark"></i></button>
+        </div>
+      </div>`;
+  }).join('');
+}
+db.ref('gameInvites/'+currentUserId).on('value', snap=>{
+  gameInvitesCache = snap.val() || {};
+  renderGameInvites();
+  // إظهار بطاقة تحدٍّ جميلة تلقائياً لكل دعوة جديدة لم تُعرض من قبل
+  Object.keys(gameInvitesCache).forEach(iid=>{
+    if (seenGameInviteIds.has(iid)) return;
+    seenGameInviteIds.add(iid);
+    const inv = gameInvitesCache[iid];
+    const fromUid = inv.fromUid;
+    const showCard = ()=>{
+      const u = usersCache[fromUid] || {};
+      enqueueChallengeCard({
+        name: u.name || ('مستخدم '+getPublicId(fromUid)),
+        avatarUrl: u.avatarUrl || '',
+        onAccept: ()=> acceptGameInvite(iid, fromUid),
+        onDecline: ()=> db.ref('gameInvites/'+currentUserId+'/'+iid).remove()
+      });
+    };
+    if (usersCache[fromUid] === undefined){ loadUserProfile(fromUid); setTimeout(showCard, 500); }
+    else showCard();
+  });
+});
+
+async function acceptGameInvite(inviteId, fromUid){
+  const ids = Object.keys(gameImagesCache);
+  if (ids.length < 2){ showToast('لا توجد صور كافية في اللعبة حالياً','error'); return; }
+  try{
+    const gid = db.ref('games').push().key;
+    const img1 = pickRandomImageId();
+    const img2 = pickRandomImageId(img1);
+    await db.ref('games/'+gid).set({ player1: fromUid, player2: currentUserId, player1Image: img1, player2Image: img2, status:'active', createdAt: Date.now() });
+    await db.ref('activeGameFor/'+currentUserId).set(gid);
+    await db.ref('activeGameFor/'+fromUid).set(gid);
+    await db.ref('gameInvites/'+currentUserId+'/'+inviteId).remove();
+    openGameOverlay();
+  }catch(e){ showToast('تعذّر بدء المنافسة','error'); }
+}
+
+// ---------- بطاقة التحدي الجميلة (تُستخدم لرابط الدعوة ولدعوات الأصدقاء) ----------
+let challengeQueue = [];
+let challengeShowing = false;
+let challengeActive = null; // { onAccept, onDecline }
+
+function enqueueChallengeCard(item){
+  challengeQueue.push(item);
+  processChallengeQueue();
+}
+function processChallengeQueue(){
+  if (challengeShowing || !challengeQueue.length) return;
+  challengeShowing = true;
+  const item = challengeQueue.shift();
+  challengeActive = item;
+  renderChallengeConfirm(item.name, item.avatarUrl);
+  document.getElementById('challenge-confirm-overlay').classList.add('show');
+}
+function renderChallengeConfirm(name, avatarUrl){
+  document.getElementById('challenge-msg').textContent = name + ' يتحداك في لعبة خمّن الشخصية!';
+  document.getElementById('challenge-avatar').innerHTML = avatarUrl
+    ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`
+    : '<i class="fas fa-user" style="font-size:28px;color:var(--ink-muted);"></i>';
+}
+function closeChallengeCard(){
+  document.getElementById('challenge-confirm-overlay').classList.remove('show');
+  challengeActive = null;
+  challengeShowing = false;
+  setTimeout(processChallengeQueue, 350);
+}
+function acceptIncomingChallenge(){
+  const item = challengeActive;
+  closeChallengeCard();
+  if (item && item.onAccept) item.onAccept();
+}
+function declineIncomingChallenge(){
+  const item = challengeActive;
+  closeChallengeCard();
+  if (item && item.onDecline) item.onDecline();
+}
+
+// ---------- الانضمام عبر رابط الدعوة ----------
+(function checkGameLinkParam(){
+  const params = new URLSearchParams(location.search);
+  const gid = params.get('game');
+  if (!gid) return;
+  history.replaceState(null, '', location.pathname);
+  db.ref('games/'+gid).once('value').then(async snap=>{
+    const g = snap.val();
+    if (!g){ showToast('رابط التحدي غير صالح أو منتهي','error'); return; }
+    if (g.player1 === currentUserId || g.player2 === currentUserId){
+      await db.ref('activeGameFor/'+currentUserId).set(gid);
+      openGameOverlay();
+      return;
+    }
+    if (g.player2){ showToast('هذه المنافسة ممتلئة بالفعل','error'); return; }
+    const fromUid = g.player1;
+    const showLinkCard = ()=>{
+      const u = usersCache[fromUid] || {};
+      enqueueChallengeCard({
+        name: u.name || ('مستخدم '+getPublicId(fromUid)),
+        avatarUrl: u.avatarUrl || '',
+        onAccept: ()=> acceptLinkChallenge(gid, fromUid),
+        onDecline: ()=>{}
+      });
+    };
+    if (usersCache[fromUid] === undefined){ loadUserProfile(fromUid); setTimeout(showLinkCard, 500); }
+    else showLinkCard();
+  }).catch(()=>{ showToast('تعذّر تحميل رابط التحدي','error'); });
+})();
+
+async function acceptLinkChallenge(gid, fromUid){
+  try{
+    const g = (await db.ref('games/'+gid).once('value')).val();
+    if (!g){ showToast('انتهت صلاحية هذا التحدي','error'); return; }
+    if (g.player2){ showToast('هذه المنافسة ممتلئة بالفعل','error'); return; }
+    const ids = Object.keys(gameImagesCache).length ? gameImagesCache : (await db.ref('gameImages').once('value')).val() || {};
+    gameImagesCache = ids;
+    const img2 = pickRandomImageId(g.player1Image);
+    if (!img2){ showToast('لا توجد صور كافية في اللعبة حالياً','error'); return; }
+    await db.ref('games/'+gid).update({ player2: currentUserId, player2Image: img2, status:'active' });
+    await db.ref('activeGameFor/'+currentUserId).set(gid);
+    await db.ref('activeGameFor/'+fromUid).set(gid);
+    openGameOverlay();
+  }catch(e){ showToast('تعذّر الانضمام للتحدي','error'); }
+}
+
+// ---------- إدارة حالة المنافسة الحالية ----------
+let currentGameId = null;
+let currentGame = null;
+db.ref('activeGameFor/'+currentUserId).on('value', snap=>{
+  const gid = snap.val();
+  if (gid === currentGameId) return;
+  if (currentGameId){ db.ref('games/'+currentGameId).off(); db.ref('games/'+currentGameId+'/chat').off(); }
+  currentGameId = gid;
+  if (gid){
+    db.ref('games/'+gid).on('value', s=>{ currentGame = s.val(); renderGameMatchUI(); });
+    db.ref('games/'+gid+'/chat').orderByChild('timestamp').limitToLast(100).on('value', s=>{ renderGameChat(s.val()||{}); });
+  } else {
+    currentGame = null;
+    showGameLobby();
+  }
+});
+
+function showGameLobby(){
+  document.getElementById('game-lobby').style.display = 'block';
+  document.getElementById('game-match').style.display = 'none';
+  document.getElementById('game-result').style.display = 'none';
+  document.getElementById('quick-match-link-box').innerHTML = '';
+  document.getElementById('reveal-panel').style.display = 'none';
+  document.getElementById('reveal-request-box').style.display = 'none';
+  document.getElementById('reveal-request-btn').style.display = 'flex';
+}
+function renderGameMatchUI(){
+  if (!currentGame){ showGameLobby(); return; }
+  if (currentGame.status === 'finished'){
+    document.getElementById('game-lobby').style.display = 'none';
+    document.getElementById('game-match').style.display = 'none';
+    const box = document.getElementById('game-result');
+    box.style.display = 'block';
+    const iWon = currentGame.winner === currentUserId;
+    const noWinner = !currentGame.winner;
+    document.getElementById('game-result-banner').innerHTML = noWinner
+      ? `<div class="result-banner"><div class="r-icon"><i class="fas fa-door-open"></i></div><div>انتهت المنافسة</div></div>`
+      : `<div class="result-banner ${iWon?'win':'lose'}"><div class="r-icon"><i class="fas ${iWon?'fa-trophy':'fa-face-frown'}"></i></div><div>${iWon?'🎉 مبروك، لقد فزت!':'للأسف، فاز خصمك هذه المرة'}</div></div>`;
+    return;
+  }
+  if (currentGame.status === 'waiting'){
+    document.getElementById('game-lobby').style.display = 'block';
+    document.getElementById('game-match').style.display = 'none';
+    document.getElementById('game-result').style.display = 'none';
+    return;
+  }
+  // active
+  document.getElementById('game-lobby').style.display = 'none';
+  document.getElementById('game-result').style.display = 'none';
+  document.getElementById('game-match').style.display = 'block';
+  const myRole = currentGame.player1 === currentUserId ? 'player1' : 'player2';
+  const myImageId = myRole === 'player1' ? currentGame.player1Image : currentGame.player2Image;
+  const opponentImageId = myRole === 'player1' ? currentGame.player2Image : currentGame.player1Image;
+  const opImg = gameImagesCache[opponentImageId];
+  document.getElementById('opponent-visible-img').src = opImg ? opImg.url : '';
+  renderRevealState(myImageId, opponentImageId);
+}
+
+/* ---------- إظهار الشخصية للخصم (بموافقة الطرفين) ---------- */
+function renderRevealState(myImageId, opponentImageId){
+  const btn = document.getElementById('reveal-request-btn');
+  const box = document.getElementById('reveal-request-box');
+  const panel = document.getElementById('reveal-panel');
+  if (!currentGame) return;
+
+  if (currentGame.revealed){
+    btn.style.display = 'none';
+    box.style.display = 'none';
+    panel.style.display = 'block';
+    const myImg = gameImagesCache[myImageId];
+    const opImgFull = gameImagesCache[opponentImageId];
+    document.getElementById('reveal-cards-row').innerHTML = `
+      <div class="reveal-card"><div class="r-lbl">شخصيتك</div><img src="${myImg?myImg.url:''}"><div class="r-name">${escapeHtml(myImg?myImg.name:'؟')}</div></div>
+      <div class="reveal-card"><div class="r-lbl">شخصية خصمك</div><img src="${opImgFull?opImgFull.url:''}"><div class="r-name">${escapeHtml(opImgFull?opImgFull.name:'؟')}</div></div>`;
+    return;
+  }
+
+  panel.style.display = 'none';
+
+  if (currentGame.revealRequestBy === currentUserId){
+    btn.style.display = 'none';
+    box.style.display = 'block';
+    box.innerHTML = `<div class="reveal-wait"><i class="fas fa-hourglass-half"></i> بانتظار موافقة خصمك على إظهار الشخصيتين...
+      <button class="btn btn-secondary" style="width:100%;margin-top:10px;" onclick="cancelMyRevealRequest()"><i class="fas fa-xmark"></i> إلغاء الطلب</button></div>`;
+  } else if (currentGame.revealRequestBy){
+    btn.style.display = 'none';
+    box.style.display = 'block';
+    box.innerHTML = `<div class="reveal-consent">
+      يريد خصمك إظهار الشخصيتين لكما، هل توافق؟
+      <div class="game-actions-row">
+        <button class="btn btn-glow" onclick="agreeMutualReveal()"><i class="fas fa-check"></i> موافق</button>
+        <button class="btn btn-secondary" onclick="declineMutualReveal()"><i class="fas fa-xmark"></i> رفض</button>
+      </div>
+    </div>`;
+  } else {
+    btn.style.display = 'flex';
+    box.style.display = 'none';
+  }
+}
+function requestMutualReveal(){
+  if (!currentGameId || !currentGame) return;
+  if (currentGame.revealRequestBy && currentGame.revealRequestBy !== currentUserId){
+    agreeMutualReveal();
+    return;
+  }
+  db.ref('games/'+currentGameId).update({ revealRequestBy: currentUserId }).catch(()=>{ showToast('تعذّرت العملية','error'); });
+}
+function agreeMutualReveal(){
+  if (!currentGameId) return;
+  db.ref('games/'+currentGameId).update({ revealed: true }).catch(()=>{ showToast('تعذّرت العملية','error'); });
+}
+function declineMutualReveal(){
+  if (!currentGameId) return;
+  db.ref('games/'+currentGameId).update({ revealRequestBy: null }).catch(()=>{});
+}
+function cancelMyRevealRequest(){
+  if (!currentGameId) return;
+  db.ref('games/'+currentGameId).update({ revealRequestBy: null }).catch(()=>{});
+}
+async function declareGameResult(result){
+  if (!currentGameId) return;
+  try{
+    await db.ref('games/'+currentGameId).update({ status:'finished', winner: result==='win' ? currentUserId : null });
+  }catch(e){ showToast('تعذّرت العملية','error'); }
+}
+async function leaveGame(){
+  if (!currentGameId){ closeGameOverlay(); return; }
+  const gid = currentGameId;
+  const g = currentGame;
+  try{
+    await db.ref('activeGameFor/'+currentUserId).remove();
+    if (g && g.status !== 'finished'){
+      const opponent = g.player1 === currentUserId ? g.player2 : g.player1;
+      if (opponent) await db.ref('activeGameFor/'+opponent).remove();
+      await db.ref('games/'+gid).update({ status:'finished', winner:null });
+    }
+  }catch(e){}
+}
+function renderGameChat(msgs){
+  const thread = document.getElementById('game-chat-thread');
+  const list = Object.values(msgs).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  thread.innerHTML = list.map(m=>{
+    const mine = m.from === currentUserId;
+    return `<div class="chat-bubble ${mine?'me':'owner'}">${escapeHtml(m.text||'')}</div>`;
+  }).join('');
+  thread.scrollTop = thread.scrollHeight;
+}
+/* تحسين خانتي المحادثة: تكبير تلقائي أثناء الكتابة، وتمرير سلس حتى لا تختفي خلف لوحة المفاتيح */
+document.querySelectorAll('.chat-textarea').forEach(ta=>{
+  ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,120)+'px'; });
+  ta.addEventListener('focus', ()=>{
+    setTimeout(()=>{
+      const body = ta.closest('.sheet-body');
+      if (body) body.scrollTo({ top: body.scrollHeight, behavior:'smooth' });
+      ta.scrollIntoView({ block:'nearest', behavior:'smooth' });
+    }, 300);
+  });
+});
+
+async function sendGameChatMessage(){
+  if (!currentGameId) return;
+  const input = document.getElementById('game-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  try{ await db.ref('games/'+currentGameId+'/chat').push({ from: currentUserId, text, timestamp: Date.now() }); }
+  catch(e){ showToast('تعذّر إرسال الرسالة','error'); }
+}
+</script>
+</body>
+</html>
